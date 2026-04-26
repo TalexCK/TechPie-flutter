@@ -3,17 +3,20 @@ import 'package:flutter/widgets.dart';
 import 'auth_service.dart';
 import 'debug_logger.dart';
 import 'storage_service.dart';
+import 'theme_service.dart';
 
 class ServiceProvider extends InheritedWidget {
   final AuthService authService;
   final DebugLogger debugLogger;
   final StorageService storageService;
+  final ThemeService themeService;
 
   const ServiceProvider({
     super.key,
     required this.authService,
     required this.debugLogger,
     required this.storageService,
+    required this.themeService,
     required super.child,
   });
 
@@ -27,5 +30,6 @@ class ServiceProvider extends InheritedWidget {
   bool updateShouldNotify(ServiceProvider oldWidget) =>
       authService != oldWidget.authService ||
       debugLogger != oldWidget.debugLogger ||
-      storageService != oldWidget.storageService;
+      storageService != oldWidget.storageService ||
+      themeService != oldWidget.themeService;
 }

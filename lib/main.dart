@@ -11,6 +11,7 @@ import 'services/debug_logger.dart';
 import 'services/http_client.dart';
 import 'services/service_provider.dart';
 import 'services/storage_service.dart';
+import 'services/theme_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,6 +21,7 @@ void main() async {
   final debugLogger = DebugLogger()..enabled = storageService.debugMode;
   final httpClient = LoggingHttpClient(debugLogger);
   final authService = AuthService(storageService, httpClient);
+  final themeService = ThemeService(storageService);
 
   await authService.initialize();
 
@@ -27,6 +29,7 @@ void main() async {
     authService: authService,
     debugLogger: debugLogger,
     storageService: storageService,
+    themeService: themeService,
   ));
 }
 
@@ -34,34 +37,32 @@ class TechPieApp extends StatelessWidget {
   final AuthService authService;
   final DebugLogger debugLogger;
   final StorageService storageService;
+  final ThemeService themeService;
 
   const TechPieApp({
     super.key,
     required this.authService,
     required this.debugLogger,
     required this.storageService,
+    required this.themeService,
   });
 
   @override
   Widget build(BuildContext context) {
-    return ServiceProvider(
-      authService: authService,
-      debugLogger: debugLogger,
-      storageService: storageService,
-      child: MaterialApp(
-        title: 'TechPie',
-        theme: ThemeData(
-          useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+    return ListenableBuilder(
+      listenable: themeService,
+      builder: (context, _) => ServiceProvider(
+        authService: authService,
+        debugLogger: debugLogger,
+        storageService: storageService,
+        themeService: themeService,
+        child: MaterialApp(
+          title: 'TechPie',
+          theme: themeService.lightTheme,
+          darkTheme: themeService.darkTheme,
+          themeMode: themeService.themeMode,
+          home: const AppShell(),
         ),
-        darkTheme: ThemeData(
-          useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: Colors.deepPurple,
-            brightness: Brightness.dark,
-          ),
-        ),
-        home: const AppShell(),
       ),
     );
   }

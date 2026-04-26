@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../services/service_provider.dart';
+import '../services/theme_service.dart';
 import 'debug_log_page.dart';
 import 'login_page.dart';
 
@@ -38,11 +39,12 @@ class _SettingsPageState extends State<SettingsPage> {
     final auth = sp.authService;
     final logger = sp.debugLogger;
     final storage = sp.storageService;
+    final themeService = sp.themeService;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
       body: ListenableBuilder(
-        listenable: Listenable.merge([auth, logger]),
+        listenable: Listenable.merge([auth, logger, themeService]),
         builder: (context, _) => ListView(
           children: [
             // Account section
@@ -83,16 +85,10 @@ class _SettingsPageState extends State<SettingsPage> {
             // Appearance section
             _sectionHeader(theme, 'Appearance'),
             ListTile(
-              leading: const Icon(Icons.dark_mode_outlined),
+              leading: Icon(themeService.mode.icon),
               title: const Text('Theme'),
-              subtitle: const Text('System default'),
-              onTap: () {},
-            ),
-            ListTile(
-              leading: const Icon(Icons.palette_outlined),
-              title: const Text('Dynamic color'),
-              subtitle: const Text('Use wallpaper colors'),
-              trailing: Switch(value: true, onChanged: (_) {}),
+              subtitle: Text(themeService.mode.label),
+              onTap: () => _showThemePicker(context, themeService),
             ),
             const Divider(),
 
@@ -138,6 +134,40 @@ class _SettingsPageState extends State<SettingsPage> {
                   MaterialPageRoute(builder: (_) => const DebugLogPage()),
                 ),
               ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showThemePicker(BuildContext context, ThemeService themeService) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Text(
+                'Choose theme',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ),
+            for (final mode in AppThemeMode.values)
+              ListTile(
+                leading: Icon(mode.icon),
+                title: Text(mode.label),
+                trailing: themeService.mode == mode
+                    ? Icon(Icons.check,
+                        color: Theme.of(context).colorScheme.primary)
+                    : null,
+                onTap: () {
+                  themeService.setMode(mode);
+                  Navigator.pop(context);
+                },
+              ),
+            const SizedBox(height: 8),
           ],
         ),
       ),

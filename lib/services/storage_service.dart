@@ -10,6 +10,7 @@ class StorageService {
   static const _debugModeKey = 'debug_mode';
   static const _schoolNameKey = 'cached_school_name';
   static const _phoneKey = 'cached_phone';
+  static const _themeModeKey = 'theme_mode';
 
   final FlutterSecureStorage _secure;
   final SharedPreferences _prefs;
@@ -45,4 +46,8 @@ class StorageService {
   String get cachedPhone => _prefs.getString(_phoneKey) ?? '';
   Future<void> setCachedPhone(String phone) =>
       _prefs.setString(_phoneKey, phone);
+
+  String get themeMode => _prefs.getString(_themeModeKey) ?? 'system';
+  Future<void> setThemeMode(String mode) =>
+      _prefs.setString(_themeModeKey, mode);
 }
