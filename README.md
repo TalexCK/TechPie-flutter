@@ -43,6 +43,15 @@ GeekPie 开发的 ShanghaiTech 非官方客户端。
     - [ ] Piazza Forum
     - [ ] CourseBench Integration
 
+## Development
+
+### Android
+
+- Aliyun mirror
+- JDK 17
+- Android NDK 28
+- Android SDK 35
+
 ## License
 
 MIT
