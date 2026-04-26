@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../services/service_provider.dart';
 import 'debug_log_page.dart';
@@ -12,6 +13,24 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
+  String _appVersion = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAppVersion();
+  }
+
+  Future<void> _loadAppVersion() async {
+    final info = await PackageInfo.fromPlatform();
+    if (!mounted) return;
+    setState(() {
+      _appVersion = info.buildNumber.isNotEmpty
+          ? '${info.version}+${info.buildNumber}'
+          : info.version;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -31,9 +50,11 @@ class _SettingsPageState extends State<SettingsPage> {
             if (auth.isLoggedIn) ...[
               ListTile(
                 leading: const Icon(Icons.person),
-                title: Text(auth.session!.userName.isNotEmpty
-                    ? auth.session!.userName
-                    : auth.session!.userId),
+                title: Text(
+                  auth.session!.userName.isNotEmpty
+                      ? auth.session!.userName
+                      : auth.session!.userId,
+                ),
                 subtitle: Text(
                   [
                     auth.session!.schoolName,
@@ -86,7 +107,11 @@ class _SettingsPageState extends State<SettingsPage> {
             ListTile(
               leading: const Icon(Icons.info_outline),
               title: const Text('About'),
-              subtitle: const Text('Version 1.0.0'),
+              subtitle: Text(
+                _appVersion.isEmpty
+                    ? 'Version Unknown'
+                    : 'Version $_appVersion',
+              ),
               onTap: () {},
             ),
             const Divider(),

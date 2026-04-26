@@ -1,17 +1,48 @@
-# techpie
+# TechPie
 
-A new Flutter project.
+GeekPie 开发的 ShanghaiTech 非官方客户端。
 
-## Getting Started
+## Support Platform
 
-This project is a starting point for a Flutter application.
+理论支持多平台，实际测试如下平台：
 
-A few resources to get you started if this is your first Flutter project:
+- [x] Linux
+- [ ] Windows
+- [ ] MacOS
+- [ ] Android
+- [ ] iOS
+- [ ] HarmonyOS NEXT
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+## Roadmap
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+- UI
+    - [x] Schedule
+    - [x] Login
+    - [ ] Assignment
+    - [ ] Homepage
+    - [ ] iOS
+        - [ ] Liquid Glass
+        - [ ] Dynamic Island
+    - [ ] HarmonyOS NEXT
+        - [ ] Native Card
+        - [ ] Realtime Window
+    - [ ] Android (Including other customized OS)
+        - [ ] Soooo many...
+- API
+    - [x] eGate login / keep alive
+    - [ ] Schedule
+    - [ ] Homework / Resources
+        - [ ] GradeScope
+        - [ ] elearning
+        - [ ] Piazza
+        - [ ] ACM OJ
+- Feature
+    - [x] Auto renew token
+    - [ ] Auto refresh schedule
+    - [ ] Auto deadline fetch / jump
+    - [ ] Piazza Forum
+    - [ ] CourseBench Integration
+
+## License
+
+MIT
