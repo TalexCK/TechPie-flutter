@@ -7,22 +7,28 @@ import 'package:techpie/services/auth_service.dart';
 import 'package:techpie/services/debug_logger.dart';
 import 'package:techpie/services/http_client.dart';
 import 'package:techpie/services/storage_service.dart';
+import 'package:techpie/services/theme_service.dart';
 
 void main() {
-  testWidgets('App shell renders with navigation bar',
-      (WidgetTester tester) async {
+  testWidgets('App shell renders with navigation bar', (
+    WidgetTester tester,
+  ) async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
     final storage = StorageService(prefs);
     final logger = DebugLogger();
     final http = LoggingHttpClient(logger);
     final auth = AuthService(storage, http);
+    final theme = ThemeService(storage);
 
-    await tester.pumpWidget(TechPieApp(
-      authService: auth,
-      debugLogger: logger,
-      storageService: storage,
-    ));
+    await tester.pumpWidget(
+      TechPieApp(
+        authService: auth,
+        debugLogger: logger,
+        storageService: storage,
+        themeService: theme,
+      ),
+    );
 
     expect(find.byType(NavigationBar), findsOneWidget);
     expect(find.text('Home'), findsWidgets);
@@ -39,11 +45,14 @@ void main() {
     final http = LoggingHttpClient(logger);
     final auth = AuthService(storage, http);
 
-    await tester.pumpWidget(TechPieApp(
-      authService: auth,
-      debugLogger: logger,
-      storageService: storage,
-    ));
+    await tester.pumpWidget(
+      TechPieApp(
+        authService: auth,
+        debugLogger: logger,
+        storageService: storage,
+        themeService: ThemeService(storage),
+      ),
+    );
 
     // Starts on Home
     expect(find.text('Welcome to TechPie'), findsOneWidget);
