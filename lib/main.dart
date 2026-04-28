@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -14,8 +15,8 @@ import 'services/schedule_service.dart';
 import 'services/service_provider.dart';
 import 'services/storage_service.dart';
 import 'services/theme_service.dart';
-import 'widgets/native_glass_floating_button.dart';
-import 'widgets/native_glass_tab_bar.dart';
+import 'widgets/ios_liquid/ios_glass_floating_button.dart';
+import 'widgets/ios_liquid/ios_glass_tab_bar.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -113,29 +114,32 @@ class _AppShellState extends State<AppShell> {
 
   int _selectedIndex = 0;
 
-  static const List<NativeGlassTabBarItem> _navigationItems = [
-    NativeGlassTabBarItem(
+  bool get _usesIosLiquidGlass =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+
+  static const List<IosGlassTabBarItem> _navigationItems = [
+    IosGlassTabBarItem(
       label: 'Home',
       icon: Icons.home_outlined,
       selectedIcon: Icons.home,
       sfSymbol: 'house',
       selectedSfSymbol: 'house.fill',
     ),
-    NativeGlassTabBarItem(
+    IosGlassTabBarItem(
       label: 'Schedule',
       icon: Icons.calendar_month_outlined,
       selectedIcon: Icons.calendar_month,
       sfSymbol: 'calendar',
       selectedSfSymbol: 'calendar.circle.fill',
     ),
-    NativeGlassTabBarItem(
+    IosGlassTabBarItem(
       label: 'Assignments',
       icon: Icons.assignment_outlined,
       selectedIcon: Icons.assignment,
       sfSymbol: 'checkmark.circle',
       selectedSfSymbol: 'checkmark.circle.fill',
     ),
-    NativeGlassTabBarItem(
+    IosGlassTabBarItem(
       label: 'Settings',
       icon: Icons.settings_outlined,
       selectedIcon: Icons.settings,
@@ -153,6 +157,8 @@ class _AppShellState extends State<AppShell> {
 
   @override
   Widget build(BuildContext context) {
+    final usesIosLiquidGlass = _usesIosLiquidGlass;
+
     return Scaffold(
       extendBody: true,
       body: PageTransitionSwitcher(
@@ -168,24 +174,44 @@ class _AppShellState extends State<AppShell> {
         child: _pages[_selectedIndex],
       ),
       floatingActionButton: _selectedIndex == _assignmentsIndex
-          ? NativeGlassFloatingButton(
-              onPressed: () {},
-              icon: Icons.add,
-              sfSymbol: 'plus',
-            )
+          ? usesIosLiquidGlass
+                ? IosGlassFloatingButton(
+                    onPressed: () {},
+                    icon: Icons.add,
+                    sfSymbol: 'plus',
+                  )
+                : FloatingActionButton(
+                    onPressed: () {},
+                    child: const Icon(Icons.add),
+                  )
           : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      bottomNavigationBar: NativeGlassTabBar(
-        selectedIndex: _selectedIndex,
-        items: _navigationItems,
-        onSelected: (index) {
-          if (index == _selectedIndex) return;
-
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
-      ),
+      bottomNavigationBar: usesIosLiquidGlass
+          ? IosGlassTabBar(
+              selectedIndex: _selectedIndex,
+              items: _navigationItems,
+              onSelected: _handleSelectedIndexChanged,
+            )
+          : NavigationBar(
+              selectedIndex: _selectedIndex,
+              onDestinationSelected: _handleSelectedIndexChanged,
+              destinations: [
+                for (final item in _navigationItems)
+                  NavigationDestination(
+                    icon: Icon(item.icon),
+                    selectedIcon: Icon(item.selectedIcon),
+                    label: item.label,
+                  ),
+              ],
+            ),
     );
+  }
+
+  void _handleSelectedIndexChanged(int index) {
+    if (index == _selectedIndex) return;
+
+    setState(() {
+      _selectedIndex = index;
+    });
   }
 }
