@@ -36,7 +36,10 @@ class DesktopSidebar extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _SidebarDragHeader(horizontalPadding: horizontalPadding),
+            _SidebarDragHeader(
+              horizontalPadding: horizontalPadding,
+              collapsed: collapsed,
+            ),
             Expanded(
               child: Padding(
                 padding: EdgeInsets.fromLTRB(
@@ -85,8 +88,12 @@ class DesktopSidebar extends StatelessWidget {
 
 class _SidebarDragHeader extends StatelessWidget {
   final double horizontalPadding;
+  final bool collapsed;
 
-  const _SidebarDragHeader({required this.horizontalPadding});
+  const _SidebarDragHeader({
+    required this.horizontalPadding,
+    required this.collapsed,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -99,7 +106,59 @@ class _SidebarDragHeader extends StatelessWidget {
           horizontalPadding,
           DesktopSidebarTokens.headerBottomPadding,
         ),
-        child: SizedBox.expand(child: DragToMoveArea(child: const SizedBox())),
+        child: DragToMoveArea(
+          child: _SidebarBrand(collapsed: collapsed),
+        ),
+      ),
+    );
+  }
+}
+
+class _SidebarBrand extends StatelessWidget {
+  final bool collapsed;
+
+  const _SidebarBrand({
+    required this.collapsed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    final foreground = colorScheme.primary;
+    final canShowLabel = !collapsed;
+
+    return SizedBox(
+      height: DesktopSidebarTokens.brandHeight,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: DesktopSidebarTokens.iconColumnWidth,
+            child: Center(
+              child: Icon(
+                Icons.school_rounded,
+                size: DesktopSidebarTokens.brandIconSize,
+                color: foreground,
+              ),
+            ),
+          ),
+          if (canShowLabel) ...[
+            const SizedBox(width: DesktopSidebarTokens.brandTextGap),
+            Expanded(
+              child: Text(
+                'TechPie',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: colorScheme.onSurface,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
