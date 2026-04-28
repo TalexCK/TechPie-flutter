@@ -56,6 +56,10 @@ private final class NativeGlassTabBarFactory: NSObject, FlutterPlatformViewFacto
 }
 
 private final class NativeGlassTabBarPlatformView: NSObject, FlutterPlatformView, UITabBarDelegate {
+  private let tabBarIconPointSize: CGFloat = 20
+  private let tabBarImageTopInset: CGFloat = -3
+  private let tabBarTitleVerticalOffset: CGFloat = 3
+
   private let rootView: UIView
   private let channel: FlutterMethodChannel
   private let tabBar = UITabBar()
@@ -71,8 +75,34 @@ private final class NativeGlassTabBarPlatformView: NSObject, FlutterPlatformView
     }
   }
 
+  private var barBackgroundColor: UIColor {
+    UIColor { trait in
+      if trait.userInterfaceStyle == .dark {
+        return UIColor.systemBackground.withAlphaComponent(0.84)
+      }
+
+      return UIColor.systemBackground.withAlphaComponent(0.88)
+    }
+  }
+
   private var selectedItemColor: UIColor {
-    UIColor(red: 0x00 / 255.0, green: 0x88 / 255.0, blue: 0xCC / 255.0, alpha: 1.0)
+    UIColor { trait in
+      if trait.userInterfaceStyle == .dark {
+        return UIColor(
+          red: 0x0A / 255.0,
+          green: 0x84 / 255.0,
+          blue: 0xFF / 255.0,
+          alpha: 1.0
+        )
+      }
+
+      return UIColor(
+        red: 0x00 / 255.0,
+        green: 0x7A / 255.0,
+        blue: 0xFF / 255.0,
+        alpha: 1.0
+      )
+    }
   }
 
   private var normalTitleAttributes: [NSAttributedString.Key: Any] {
@@ -87,6 +117,10 @@ private final class NativeGlassTabBarPlatformView: NSObject, FlutterPlatformView
       .foregroundColor: selectedItemColor,
       .font: UIFont.systemFont(ofSize: 10.5, weight: .semibold)
     ]
+  }
+
+  private var tabBarTitlePositionAdjustment: UIOffset {
+    UIOffset(horizontal: 0, vertical: tabBarTitleVerticalOffset)
   }
 
   init(
@@ -106,6 +140,7 @@ private final class NativeGlassTabBarPlatformView: NSObject, FlutterPlatformView
     parseArguments(args)
     buildViewHierarchy()
     applyItems()
+    scheduleInitialSelectionSync()
 
     channel.setMethodCallHandler { [weak self] call, result in
       self?.handle(call: call, result: result)
@@ -163,7 +198,8 @@ private final class NativeGlassTabBarPlatformView: NSObject, FlutterPlatformView
     let appearance = UITabBarAppearance()
 
     appearance.configureWithTransparentBackground()
-    appearance.backgroundColor = .clear
+    appearance.backgroundColor = barBackgroundColor
+    appearance.backgroundEffect = UIBlurEffect(style: .systemChromeMaterial)
     appearance.shadowColor = .clear
     appearance.shadowImage = nil
     appearance.backgroundImage = nil
@@ -185,27 +221,28 @@ private final class NativeGlassTabBarPlatformView: NSObject, FlutterPlatformView
   private func configureItemAppearance(_ itemAppearance: UITabBarItemAppearance) {
     itemAppearance.normal.iconColor = normalItemColor
     itemAppearance.normal.titleTextAttributes = normalTitleAttributes
+    itemAppearance.normal.titlePositionAdjustment = tabBarTitlePositionAdjustment
 
     itemAppearance.selected.iconColor = selectedItemColor
     itemAppearance.selected.titleTextAttributes = selectedTitleAttributes
+    itemAppearance.selected.titlePositionAdjustment = tabBarTitlePositionAdjustment
 
     itemAppearance.focused.iconColor = selectedItemColor
     itemAppearance.focused.titleTextAttributes = selectedTitleAttributes
+    itemAppearance.focused.titlePositionAdjustment = tabBarTitlePositionAdjustment
 
     itemAppearance.disabled.iconColor = normalItemColor.withAlphaComponent(0.28)
     itemAppearance.disabled.titleTextAttributes = [
       .foregroundColor: normalItemColor.withAlphaComponent(0.28),
       .font: UIFont.systemFont(ofSize: 10.5, weight: .medium)
     ]
+    itemAppearance.disabled.titlePositionAdjustment = tabBarTitlePositionAdjustment
   }
 
   private func applyItems() {
     let tabItems = items.enumerated().map { index, item in
-      let image = UIImage(systemName: item.sfSymbol)?
-        .withRenderingMode(.alwaysTemplate)
-
-      let selectedImage = UIImage(systemName: item.selectedSfSymbol)?
-        .withRenderingMode(.alwaysTemplate)
+      let image = configuredSymbolImage(named: item.sfSymbol, weight: .medium)
+      let selectedImage = configuredSymbolImage(named: item.selectedSfSymbol, weight: .semibold)
 
       let tabItem = UITabBarItem(
         title: item.label,
@@ -214,6 +251,7 @@ private final class NativeGlassTabBarPlatformView: NSObject, FlutterPlatformView
       )
 
       tabItem.tag = index
+      applyLayoutAdjustments(to: tabItem)
       tabItem.setTitleTextAttributes(normalTitleAttributes, for: .normal)
       tabItem.setTitleTextAttributes(selectedTitleAttributes, for: .selected)
 
@@ -221,23 +259,22 @@ private final class NativeGlassTabBarPlatformView: NSObject, FlutterPlatformView
     }
 
     tabBar.setItems(tabItems, animated: false)
-
-    if tabItems.indices.contains(selectedIndex) {
-      tabBar.selectedItem = tabItems[selectedIndex]
-    }
-
+    applySelectedItem()
     refreshTabBarColors()
   }
 
   private func updateSelection(to index: Int) {
     selectedIndex = clampedIndex(index)
+    applySelectedItem()
+    refreshTabBarColors()
+  }
 
+  private func applySelectedItem() {
     guard let tabItems = tabBar.items, tabItems.indices.contains(selectedIndex) else {
       return
     }
 
     tabBar.selectedItem = tabItems[selectedIndex]
-    refreshTabBarColors()
   }
 
   private func refreshTabBarColors() {
@@ -246,6 +283,7 @@ private final class NativeGlassTabBarPlatformView: NSObject, FlutterPlatformView
 
     if let tabItems = tabBar.items {
       for item in tabItems {
+        applyLayoutAdjustments(to: item)
         item.setTitleTextAttributes(normalTitleAttributes, for: .normal)
         item.setTitleTextAttributes(selectedTitleAttributes, for: .selected)
       }
@@ -253,6 +291,37 @@ private final class NativeGlassTabBarPlatformView: NSObject, FlutterPlatformView
 
     tabBar.setNeedsLayout()
     tabBar.layoutIfNeeded()
+  }
+
+  private func scheduleInitialSelectionSync() {
+    DispatchQueue.main.async { [weak self] in
+      guard let self else { return }
+      self.applySelectedItem()
+      self.refreshTabBarColors()
+    }
+  }
+
+  private func configuredSymbolImage(named systemName: String, weight: UIImage.SymbolWeight)
+    -> UIImage?
+  {
+    let configuration = UIImage.SymbolConfiguration(
+      pointSize: tabBarIconPointSize,
+      weight: weight,
+      scale: .medium
+    )
+
+    return UIImage(systemName: systemName, withConfiguration: configuration)?
+      .withRenderingMode(.alwaysTemplate)
+  }
+
+  private func applyLayoutAdjustments(to item: UITabBarItem) {
+    item.imageInsets = UIEdgeInsets(
+      top: tabBarImageTopInset,
+      left: 0,
+      bottom: -tabBarImageTopInset,
+      right: 0
+    )
+    item.titlePositionAdjustment = tabBarTitlePositionAdjustment
   }
 
   private func clampedIndex(_ index: Int) -> Int {
