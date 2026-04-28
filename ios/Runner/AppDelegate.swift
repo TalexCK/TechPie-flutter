@@ -60,17 +60,57 @@ private final class NativeGlassTabBarFactory: NSObject, FlutterPlatformViewFacto
   }
 }
 
+private final class NativeTabBarHostView: UIView {
+  let tabBar = UITabBar()
+  var onValidLayout: ((_ width: CGFloat, _ height: CGFloat) -> Void)?
+
+  override init(frame: CGRect) {
+    super.init(frame: frame)
+
+    backgroundColor = .clear
+    clipsToBounds = false
+
+    tabBar.frame = bounds
+    tabBar.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+    addSubview(tabBar)
+  }
+
+  required init?(coder: NSCoder) {
+    fatalError("init(coder:) has not been implemented")
+  }
+
+  override func layoutSubviews() {
+    super.layoutSubviews()
+
+    tabBar.frame = bounds
+
+    guard bounds.width > 40, bounds.height > 20 else {
+      return
+    }
+
+    onValidLayout?(bounds.width, bounds.height)
+  }
+}
+
 private final class NativeGlassTabBarPlatformView: NSObject, FlutterPlatformView, UITabBarDelegate {
   private let tabBarIconPointSize: CGFloat = 20
   private let tabBarImageTopInset: CGFloat = -3
   private let tabBarTitleVerticalOffset: CGFloat = 3
 
-  private let rootView: UIView
+  private let rootView: NativeTabBarHostView
   private let channel: FlutterMethodChannel
-  private let tabBar = UITabBar()
+
+  private var tabBar: UITabBar {
+    rootView.tabBar
+  }
 
   private var items: [TabBarItem] = []
   private var selectedIndex = 0
+
+  private var didInstallItems = false
+  private var isInstallingItems = false
+  private var lastInstalledWidth: CGFloat = 0
+  private var pendingSelectedIndex: Int?
 
   private var normalItemColor: UIColor {
     UIColor { trait in
@@ -134,7 +174,7 @@ private final class NativeGlassTabBarPlatformView: NSObject, FlutterPlatformView
     arguments args: Any?,
     messenger: FlutterBinaryMessenger
   ) {
-    rootView = UIView(frame: frame)
+    rootView = NativeTabBarHostView(frame: frame)
     channel = FlutterMethodChannel(
       name: "techpie/native_glass_tab_bar/\(viewId)",
       binaryMessenger: messenger
@@ -143,9 +183,13 @@ private final class NativeGlassTabBarPlatformView: NSObject, FlutterPlatformView
     super.init()
 
     parseArguments(args)
-    buildViewHierarchy()
-    applyItems()
-    scheduleInitialSelectionSync()
+    configureTabBar()
+
+    rootView.onValidLayout = { [weak self] width, height in
+      self?.installOrRebuildItemsIfNeeded(width: width, height: height)
+    }
+
+    scheduleInitialInstallPasses()
 
     channel.setMethodCallHandler { [weak self] call, result in
       self?.handle(call: call, result: result)
@@ -177,26 +221,17 @@ private final class NativeGlassTabBarPlatformView: NSObject, FlutterPlatformView
     selectedIndex = clampedIndex(selectedIndex)
   }
 
-  private func buildViewHierarchy() {
-    rootView.backgroundColor = .clear
-    rootView.clipsToBounds = false
-
-    tabBar.translatesAutoresizingMaskIntoConstraints = false
+  private func configureTabBar() {
     tabBar.delegate = self
     tabBar.isTranslucent = true
     tabBar.backgroundColor = .clear
     tabBar.clipsToBounds = false
 
+    tabBar.itemPositioning = .fill
+    tabBar.itemWidth = 0
+    tabBar.itemSpacing = 0
+
     configureTabBarAppearance()
-
-    rootView.addSubview(tabBar)
-
-    NSLayoutConstraint.activate([
-      tabBar.leadingAnchor.constraint(equalTo: rootView.leadingAnchor),
-      tabBar.trailingAnchor.constraint(equalTo: rootView.trailingAnchor),
-      tabBar.topAnchor.constraint(equalTo: rootView.topAnchor),
-      tabBar.bottomAnchor.constraint(equalTo: rootView.bottomAnchor)
-    ])
   }
 
   private func configureTabBarAppearance() {
@@ -244,7 +279,74 @@ private final class NativeGlassTabBarPlatformView: NSObject, FlutterPlatformView
     itemAppearance.disabled.titlePositionAdjustment = tabBarTitlePositionAdjustment
   }
 
-  private func applyItems() {
+  private func scheduleInitialInstallPasses() {
+    DispatchQueue.main.async { [weak self] in
+      self?.forceInstallIfPossible()
+
+      DispatchQueue.main.async { [weak self] in
+        self?.forceInstallIfPossible()
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
+          self?.forceInstallIfPossible()
+        }
+      }
+    }
+  }
+
+  private func forceInstallIfPossible() {
+    rootView.setNeedsLayout()
+    rootView.layoutIfNeeded()
+
+    let width = rootView.bounds.width
+    let height = rootView.bounds.height
+
+    guard width > 40, height > 20 else {
+      return
+    }
+
+    installOrRebuildItemsIfNeeded(width: width, height: height, force: true)
+  }
+
+  private func installOrRebuildItemsIfNeeded(
+    width: CGFloat,
+    height: CGFloat,
+    force: Bool = false
+  ) {
+    guard !isInstallingItems else {
+      return
+    }
+
+    guard width > 40, height > 20 else {
+      return
+    }
+
+    let widthChanged = abs(width - lastInstalledWidth) > 0.5
+
+    guard force || !didInstallItems || widthChanged else {
+      return
+    }
+
+    isInstallingItems = true
+    defer {
+      isInstallingItems = false
+    }
+
+    lastInstalledWidth = width
+
+    tabBar.frame = CGRect(x: 0, y: 0, width: width, height: height)
+    tabBar.itemPositioning = .fill
+    tabBar.itemWidth = 0
+    tabBar.itemSpacing = 0
+
+    rebuildItems()
+
+    didInstallItems = true
+
+    tabBar.setNeedsLayout()
+    tabBar.layoutIfNeeded()
+  }
+
+  private func rebuildItems() {
     let tabItems = items.enumerated().map { index, item in
       let image = configuredSymbolImage(named: item.sfSymbol, weight: .medium)
       let selectedImage = configuredSymbolImage(named: item.selectedSfSymbol, weight: .semibold)
@@ -263,23 +365,35 @@ private final class NativeGlassTabBarPlatformView: NSObject, FlutterPlatformView
       return tabItem
     }
 
+    tabBar.setItems(nil, animated: false)
     tabBar.setItems(tabItems, animated: false)
+
     applySelectedItem()
     refreshTabBarColors()
   }
 
   private func updateSelection(to index: Int) {
     selectedIndex = clampedIndex(index)
+    pendingSelectedIndex = selectedIndex
+
+    if !didInstallItems {
+      forceInstallIfPossible()
+      return
+    }
+
     applySelectedItem()
     refreshTabBarColors()
   }
 
   private func applySelectedItem() {
-    guard let tabItems = tabBar.items, tabItems.indices.contains(selectedIndex) else {
+    let targetIndex = pendingSelectedIndex ?? selectedIndex
+
+    guard let tabItems = tabBar.items, tabItems.indices.contains(targetIndex) else {
       return
     }
 
-    tabBar.selectedItem = tabItems[selectedIndex]
+    tabBar.selectedItem = tabItems[targetIndex]
+    pendingSelectedIndex = nil
   }
 
   private func refreshTabBarColors() {
@@ -298,17 +412,10 @@ private final class NativeGlassTabBarPlatformView: NSObject, FlutterPlatformView
     tabBar.layoutIfNeeded()
   }
 
-  private func scheduleInitialSelectionSync() {
-    DispatchQueue.main.async { [weak self] in
-      guard let self else { return }
-      self.applySelectedItem()
-      self.refreshTabBarColors()
-    }
-  }
-
-  private func configuredSymbolImage(named systemName: String, weight: UIImage.SymbolWeight)
-    -> UIImage?
-  {
+  private func configuredSymbolImage(
+    named systemName: String,
+    weight: UIImage.SymbolWeight
+  ) -> UIImage? {
     let configuration = UIImage.SymbolConfiguration(
       pointSize: tabBarIconPointSize,
       weight: weight,
@@ -330,7 +437,10 @@ private final class NativeGlassTabBarPlatformView: NSObject, FlutterPlatformView
   }
 
   private func clampedIndex(_ index: Int) -> Int {
-    guard !items.isEmpty else { return 0 }
+    guard !items.isEmpty else {
+      return 0
+    }
+
     return min(max(index, 0), items.count - 1)
   }
 
@@ -362,6 +472,7 @@ private final class NativeGlassTabBarPlatformView: NSObject, FlutterPlatformView
   func tabBar(_ tabBar: UITabBar, didSelect item: UITabBarItem) {
     let index = item.tag
     selectedIndex = clampedIndex(index)
+    pendingSelectedIndex = selectedIndex
     refreshTabBarColors()
     channel.invokeMethod("onSelect", arguments: ["index": selectedIndex])
   }
