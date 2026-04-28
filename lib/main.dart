@@ -1,26 +1,24 @@
-import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'pages/assignments_page.dart';
-import 'pages/home_page.dart';
-import 'pages/schedule_page.dart';
-import 'pages/settings_page.dart';
 import 'services/assignment_service.dart';
 import 'services/auth_service.dart';
+import 'services/desktop_window_service.dart';
 import 'services/debug_logger.dart';
 import 'services/http_client.dart';
 import 'services/schedule_service.dart';
 import 'services/service_provider.dart';
 import 'services/storage_service.dart';
 import 'services/theme_service.dart';
-import 'widgets/native_glass_floating_button.dart';
-import 'widgets/native_glass_tab_bar.dart';
+import 'widgets/app_shell/app_shell.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   final prefs = await SharedPreferences.getInstance();
+  final desktopWindowService = DesktopWindowService(prefs);
+  await desktopWindowService.initialize();
+
   final storageService = StorageService(prefs);
   final debugLogger = DebugLogger()..enabled = storageService.debugMode;
   final httpClient = LoggingHttpClient(debugLogger);
@@ -96,95 +94,6 @@ class TechPieApp extends StatelessWidget {
           themeMode: themeService.themeMode,
           home: const AppShell(),
         ),
-      ),
-    );
-  }
-}
-
-class AppShell extends StatefulWidget {
-  const AppShell({super.key});
-
-  @override
-  State<AppShell> createState() => _AppShellState();
-}
-
-class _AppShellState extends State<AppShell> {
-  static const int _assignmentsIndex = 2;
-
-  int _selectedIndex = 0;
-
-  static const List<NativeGlassTabBarItem> _navigationItems = [
-    NativeGlassTabBarItem(
-      label: 'Home',
-      icon: Icons.home_outlined,
-      selectedIcon: Icons.home,
-      sfSymbol: 'house',
-      selectedSfSymbol: 'house.fill',
-    ),
-    NativeGlassTabBarItem(
-      label: 'Schedule',
-      icon: Icons.calendar_month_outlined,
-      selectedIcon: Icons.calendar_month,
-      sfSymbol: 'calendar',
-      selectedSfSymbol: 'calendar.circle.fill',
-    ),
-    NativeGlassTabBarItem(
-      label: 'Assignments',
-      icon: Icons.assignment_outlined,
-      selectedIcon: Icons.assignment,
-      sfSymbol: 'checkmark.circle',
-      selectedSfSymbol: 'checkmark.circle.fill',
-    ),
-    NativeGlassTabBarItem(
-      label: 'Settings',
-      icon: Icons.settings_outlined,
-      selectedIcon: Icons.settings,
-      sfSymbol: 'gearshape',
-      selectedSfSymbol: 'gearshape.fill',
-    ),
-  ];
-
-  static const List<Widget> _pages = [
-    HomePage(key: ValueKey('home')),
-    SchedulePage(key: ValueKey('schedule')),
-    AssignmentsPage(key: ValueKey('assignments')),
-    SettingsPage(key: ValueKey('settings')),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      extendBody: true,
-      body: PageTransitionSwitcher(
-        duration: const Duration(milliseconds: 300),
-        transitionBuilder: (child, animation, secondaryAnimation) {
-          return FadeThroughTransition(
-            animation: animation,
-            secondaryAnimation: secondaryAnimation,
-            fillColor: Colors.transparent,
-            child: child,
-          );
-        },
-        child: _pages[_selectedIndex],
-      ),
-      floatingActionButton: _selectedIndex == _assignmentsIndex
-          ? NativeGlassFloatingButton(
-              onPressed: () {},
-              icon: Icons.add,
-              sfSymbol: 'plus',
-            )
-          : null,
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      bottomNavigationBar: NativeGlassTabBar(
-        selectedIndex: _selectedIndex,
-        items: _navigationItems,
-        onSelected: (index) {
-          if (index == _selectedIndex) return;
-
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
       ),
     );
   }

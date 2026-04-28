@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:techpie/main.dart';
+import 'package:techpie/services/assignment_service.dart';
 import 'package:techpie/services/auth_service.dart';
 import 'package:techpie/services/debug_logger.dart';
 import 'package:techpie/services/http_client.dart';
@@ -11,7 +12,7 @@ import 'package:techpie/services/storage_service.dart';
 import 'package:techpie/services/theme_service.dart';
 
 void main() {
-  testWidgets('App shell renders with navigation bar', (
+  testWidgets('App shell renders with desktop sidebar', (
     WidgetTester tester,
   ) async {
     SharedPreferences.setMockInitialValues({});
@@ -22,6 +23,7 @@ void main() {
     final auth = AuthService(storage, http);
     final theme = ThemeService(storage);
     final schedule = ScheduleService(storage, http, auth);
+    final assignments = AssignmentService(storage, http, auth);
 
     await tester.pumpWidget(
       TechPieApp(
@@ -30,10 +32,11 @@ void main() {
         storageService: storage,
         themeService: theme,
         scheduleService: schedule,
+        assignmentService: assignments,
       ),
     );
 
-    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.byType(NavigationRail), findsNothing);
     expect(find.text('Home'), findsWidgets);
     expect(find.text('Schedule'), findsWidgets);
     expect(find.text('Assignments'), findsWidgets);
@@ -48,6 +51,7 @@ void main() {
     final http = LoggingHttpClient(logger);
     final auth = AuthService(storage, http);
     final schedule = ScheduleService(storage, http, auth);
+    final assignments = AssignmentService(storage, http, auth);
 
     await tester.pumpWidget(
       TechPieApp(
@@ -56,6 +60,7 @@ void main() {
         storageService: storage,
         themeService: ThemeService(storage),
         scheduleService: schedule,
+        assignmentService: assignments,
       ),
     );
 
@@ -72,7 +77,7 @@ void main() {
     // Tap Assignments
     await tester.tap(find.text('Assignments'));
     await tester.pumpAndSettle();
-    expect(find.text('No assignments yet'), findsOneWidget);
+    expect(find.text('No upcoming assignments'), findsOneWidget);
 
     // Tap Settings
     await tester.tap(find.text('Settings'));

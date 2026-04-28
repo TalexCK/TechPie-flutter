@@ -4,6 +4,7 @@ import '../models/course.dart';
 import '../models/course_table.dart';
 import '../services/schedule_service.dart';
 import '../services/service_provider.dart';
+import '../widgets/desktop_popup.dart';
 
 class SchedulePage extends StatefulWidget {
   const SchedulePage({super.key});
@@ -27,6 +28,8 @@ class _SchedulePageState extends State<SchedulePage> {
   // Animation: track slide direction for week transitions
   // 1 = forward (next week), -1 = backward (previous week), 0 = no slide
   int _slideDirection = 0;
+  final GlobalKey _viewSettingsAnchorKey = GlobalKey();
+  bool _desktopWeekPickerExpanded = false;
 
   @override
   void didChangeDependencies() {
@@ -108,6 +111,15 @@ class _SchedulePageState extends State<SchedulePage> {
     });
   }
 
+  void _setWeek(int week) {
+    final old = _currentWeek;
+    setState(() {
+      _currentWeek = week.clamp(1, 25);
+      _slideDirection = _currentWeek > old ? 1 : (_currentWeek < old ? -1 : 0);
+      _filterCoursesForWeek();
+    });
+  }
+
   void _filterCoursesForWeek() {
     final table = _schedule.courseTable;
     if (table != null) {
@@ -163,6 +175,13 @@ class _SchedulePageState extends State<SchedulePage> {
   }
 
   void _showWeekPicker() {
+    if (isDesktopLayout(context)) {
+      setState(() {
+        _desktopWeekPickerExpanded = !_desktopWeekPickerExpanded;
+      });
+      return;
+    }
+
     final computedWeek = _schedule.currentWeek();
     showModalBottomSheet(
       context: context,
@@ -285,59 +304,77 @@ class _SchedulePageState extends State<SchedulePage> {
     return Scaffold(
       appBar: AppBar(
         titleSpacing: 16,
-        title: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: _showWeekPicker,
-          child: Row(
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        title: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: _showWeekPicker,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Row(
+                  Column(
                     mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 200),
-                        transitionBuilder: (child, animation) {
-                          return FadeTransition(
-                            opacity: animation,
-                            child: SlideTransition(
-                              position: Tween<Offset>(
-                                begin: Offset(
-                                  0,
-                                  _slideDirection >= 0 ? 0.3 : -0.3,
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 200),
+                            transitionBuilder: (child, animation) {
+                              return FadeTransition(
+                                opacity: animation,
+                                child: SlideTransition(
+                                  position: Tween<Offset>(
+                                    begin: Offset(
+                                      0,
+                                      _slideDirection >= 0 ? 0.3 : -0.3,
+                                    ),
+                                    end: Offset.zero,
+                                  ).animate(animation),
+                                  child: child,
                                 ),
-                                end: Offset.zero,
-                              ).animate(animation),
-                              child: child,
+                              );
+                            },
+                            child: Text(
+                              '第 $_currentWeek 周',
+                              key: ValueKey<int>(_currentWeek),
+                              style: theme.textTheme.titleMedium,
                             ),
-                          );
-                        },
-                        child: Text(
-                          '第 $_currentWeek 周',
-                          key: ValueKey<int>(_currentWeek),
-                          style: theme.textTheme.titleMedium,
-                        ),
+                          ),
+                        ],
                       ),
+                      if (_semesterLabel.isNotEmpty)
+                        Text(
+                          _semesterLabel,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
                     ],
                   ),
-                  if (_semesterLabel.isNotEmpty)
-                    Text(
-                      _semesterLabel,
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
+                  const SizedBox(width: 4),
+                  Icon(
+                    Icons.unfold_more,
+                    size: 18,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                 ],
               ),
-              const SizedBox(width: 4),
-              Icon(
-                Icons.unfold_more,
-                size: 18,
-                color: theme.colorScheme.onSurfaceVariant,
+            ),
+            if (isDesktopLayout(context) && _desktopWeekPickerExpanded) ...[
+              const SizedBox(width: 24),
+              Expanded(
+                child: _DesktopInlineWeekPicker(
+                  currentWeek: _currentWeek,
+                  onWeekChanged: _setWeek,
+                  onGoToCurrentWeek: _goToCurrentWeek,
+                ),
               ),
-            ],
-          ),
+            ] else
+              const Spacer(),
+          ],
         ),
         actions: [
           IconButton(
@@ -355,36 +392,11 @@ class _SchedulePageState extends State<SchedulePage> {
             tooltip: 'Next week',
             onPressed: _nextWeek,
           ),
-          PopupMenuButton<String>(
+          IconButton(
+            key: _viewSettingsAnchorKey,
             icon: const Icon(Icons.more_vert),
-            onSelected: _onMenuSelected,
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'semester',
-                child: ListTile(
-                  leading: Icon(Icons.swap_horiz),
-                  title: Text('切换学期'),
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-              const PopupMenuDivider(),
-              CheckedPopupMenuItem(
-                value: 'saturday',
-                checked: _showSaturday,
-                child: const Text('显示周六'),
-              ),
-              CheckedPopupMenuItem(
-                value: 'sunday',
-                checked: _showSunday,
-                child: const Text('显示周日'),
-              ),
-              CheckedPopupMenuItem(
-                value: 'ghost',
-                checked: _showGhostCourses,
-                child: const Text('显示非本周课程'),
-              ),
-            ],
+            tooltip: '视图设置',
+            onPressed: _showViewSettingsMenu,
           ),
         ],
       ),
@@ -506,6 +518,108 @@ class _SchedulePageState extends State<SchedulePage> {
         });
     }
   }
+
+  void _showViewSettingsMenu() {
+    if (!isDesktopLayout(context)) {
+      showMenu<String>(
+        context: context,
+        position: const RelativeRect.fromLTRB(1, 1, 0, 0),
+        items: [
+          const PopupMenuItem(value: 'semester', child: Text('切换学期')),
+          CheckedPopupMenuItem(
+            value: 'saturday',
+            checked: _showSaturday,
+            child: const Text('显示周六'),
+          ),
+          CheckedPopupMenuItem(
+            value: 'sunday',
+            checked: _showSunday,
+            child: const Text('显示周日'),
+          ),
+          CheckedPopupMenuItem(
+            value: 'ghost',
+            checked: _showGhostCourses,
+            child: const Text('显示非本周课程'),
+          ),
+        ],
+      ).then((value) {
+        if (value != null) _onMenuSelected(value);
+      });
+      return;
+    }
+
+    final anchorContext = _viewSettingsAnchorKey.currentContext;
+    if (anchorContext == null) return;
+
+    showDesktopPopover(
+      anchorContext: anchorContext,
+      width: 260,
+      placement: DesktopPopoverPlacement.belowEnd,
+      offset: const Offset(-12, 8),
+      builder: (context, close) {
+        final theme = Theme.of(context);
+        return DesktopPopoverSurface(
+          child: StatefulBuilder(
+            builder: (context, setPopoverState) {
+              void toggle(String value) {
+                _onMenuSelected(value);
+                setPopoverState(() {});
+              }
+
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+                    child: Text('视图设置', style: theme.textTheme.titleSmall),
+                  ),
+                  const Divider(height: 1),
+                  DesktopMenuRow(
+                    leading: const Icon(Icons.swap_horiz, size: 20),
+                    title: Text('切换学期', style: theme.textTheme.bodyMedium),
+                    onTap: () {
+                      close();
+                      _showSemesterPicker();
+                    },
+                  ),
+                  const Divider(height: 1),
+                  DesktopMenuRow(
+                    leading: Icon(
+                      _showSaturday
+                          ? Icons.check
+                          : Icons.check_box_outline_blank,
+                      size: 20,
+                    ),
+                    title: Text('显示周六', style: theme.textTheme.bodyMedium),
+                    onTap: () => toggle('saturday'),
+                  ),
+                  DesktopMenuRow(
+                    leading: Icon(
+                      _showSunday ? Icons.check : Icons.check_box_outline_blank,
+                      size: 20,
+                    ),
+                    title: Text('显示周日', style: theme.textTheme.bodyMedium),
+                    onTap: () => toggle('sunday'),
+                  ),
+                  DesktopMenuRow(
+                    leading: Icon(
+                      _showGhostCourses
+                          ? Icons.check
+                          : Icons.check_box_outline_blank,
+                      size: 20,
+                    ),
+                    title: Text('显示非本周课程', style: theme.textTheme.bodyMedium),
+                    onTap: () => toggle('ghost'),
+                  ),
+                ],
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
 }
 
 class _DayHeader extends StatelessWidget {
@@ -565,6 +679,43 @@ class _DayHeader extends StatelessWidget {
 
   bool _isSameDay(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
+}
+
+class _DesktopInlineWeekPicker extends StatelessWidget {
+  final int currentWeek;
+  final ValueChanged<int> onWeekChanged;
+  final VoidCallback onGoToCurrentWeek;
+
+  const _DesktopInlineWeekPicker({
+    required this.currentWeek,
+    required this.onWeekChanged,
+    required this.onGoToCurrentWeek,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 48,
+      child: Row(
+        children: [
+          Expanded(
+            child: Slider(
+              value: currentWeek.toDouble(),
+              min: 1,
+              max: 25,
+              divisions: 24,
+              onChanged: (value) => onWeekChanged(value.round()),
+            ),
+          ),
+          const SizedBox(width: 16),
+          FilledButton.tonal(
+            onPressed: onGoToCurrentWeek,
+            child: const Text('回到本周'),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _DayHeaderCell extends StatelessWidget {
