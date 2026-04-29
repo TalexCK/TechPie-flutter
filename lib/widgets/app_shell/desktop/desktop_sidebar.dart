@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:window_manager/window_manager.dart';
 
 import '../app_destination.dart';
 import 'desktop_sidebar_item.dart';
@@ -108,7 +107,7 @@ class _SidebarDragHeader extends StatelessWidget {
           horizontalPadding,
           DesktopSidebarTokens.headerBottomPadding,
         ),
-        child: DragToMoveArea(child: _SidebarBrand(collapsed: collapsed)),
+        child: _SidebarBrand(collapsed: collapsed),
       ),
     );
   }

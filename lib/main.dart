@@ -3,7 +3,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'services/assignment_service.dart';
 import 'services/auth_service.dart';
-import 'services/desktop_window_service.dart';
 import 'services/debug_logger.dart';
 import 'services/http_client.dart';
 import 'services/schedule_service.dart';
@@ -16,8 +15,6 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   final prefs = await SharedPreferences.getInstance();
-  final desktopWindowService = DesktopWindowService(prefs);
-  await desktopWindowService.initialize();
 
   final storageService = StorageService(prefs);
   final debugLogger = DebugLogger()..enabled = storageService.debugMode;
@@ -48,7 +45,6 @@ void main() async {
 
   runApp(
     TechPieApp(
-      desktopWindowService: desktopWindowService,
       authService: authService,
       debugLogger: debugLogger,
       storageService: storageService,
@@ -60,7 +56,6 @@ void main() async {
 }
 
 class TechPieApp extends StatefulWidget {
-  final DesktopWindowService desktopWindowService;
   final AuthService authService;
   final DebugLogger debugLogger;
   final StorageService storageService;
@@ -70,7 +65,6 @@ class TechPieApp extends StatefulWidget {
 
   const TechPieApp({
     super.key,
-    required this.desktopWindowService,
     required this.authService,
     required this.debugLogger,
     required this.storageService,
@@ -83,27 +77,7 @@ class TechPieApp extends StatefulWidget {
   State<TechPieApp> createState() => _TechPieAppState();
 }
 
-class _TechPieAppState extends State<TechPieApp> with WidgetsBindingObserver {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.detached) {
-      widget.desktopWindowService.close();
-    }
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    widget.desktopWindowService.close();
-    super.dispose();
-  }
-
+class _TechPieAppState extends State<TechPieApp> {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(

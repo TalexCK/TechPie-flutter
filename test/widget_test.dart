@@ -6,7 +6,6 @@ import 'package:techpie/main.dart';
 import 'package:techpie/services/assignment_service.dart';
 import 'package:techpie/services/auth_service.dart';
 import 'package:techpie/services/debug_logger.dart';
-import 'package:techpie/services/desktop_window_service.dart';
 import 'package:techpie/services/http_client.dart';
 import 'package:techpie/services/schedule_service.dart';
 import 'package:techpie/services/storage_service.dart';
@@ -33,7 +32,6 @@ void main() {
 
     await tester.pumpWidget(
       TechPieApp(
-        desktopWindowService: DesktopWindowService(prefs),
         authService: auth,
         debugLogger: logger,
         storageService: storage,
@@ -67,7 +65,6 @@ void main() {
 
     await tester.pumpWidget(
       TechPieApp(
-        desktopWindowService: DesktopWindowService(prefs),
         authService: auth,
         debugLogger: logger,
         storageService: storage,
