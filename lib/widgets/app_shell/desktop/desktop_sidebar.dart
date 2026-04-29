@@ -106,9 +106,7 @@ class _SidebarDragHeader extends StatelessWidget {
           horizontalPadding,
           DesktopSidebarTokens.headerBottomPadding,
         ),
-        child: DragToMoveArea(
-          child: _SidebarBrand(collapsed: collapsed),
-        ),
+        child: DragToMoveArea(child: _SidebarBrand(collapsed: collapsed)),
       ),
     );
   }
@@ -117,9 +115,7 @@ class _SidebarDragHeader extends StatelessWidget {
 class _SidebarBrand extends StatelessWidget {
   final bool collapsed;
 
-  const _SidebarBrand({
-    required this.collapsed,
-  });
+  const _SidebarBrand({required this.collapsed});
 
   @override
   Widget build(BuildContext context) {
@@ -127,38 +123,48 @@ class _SidebarBrand extends StatelessWidget {
     final colorScheme = theme.colorScheme;
 
     final foreground = colorScheme.primary;
-    final canShowLabel = !collapsed;
 
     return SizedBox(
       height: DesktopSidebarTokens.brandHeight,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: DesktopSidebarTokens.iconColumnWidth,
-            child: Center(
-              child: Icon(
-                Icons.school_rounded,
-                size: DesktopSidebarTokens.brandIconSize,
-                color: foreground,
-              ),
-            ),
-          ),
-          if (canShowLabel) ...[
-            const SizedBox(width: DesktopSidebarTokens.brandTextGap),
-            Expanded(
-              child: Text(
-                'TechPie',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  color: colorScheme.onSurface,
-                  fontWeight: FontWeight.w700,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final canShowLabel =
+              !collapsed &&
+              constraints.maxWidth >=
+                  DesktopSidebarTokens.iconColumnWidth +
+                      DesktopSidebarTokens.brandTextGap +
+                      DesktopSidebarTokens.minLabelWidth;
+
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: DesktopSidebarTokens.iconColumnWidth,
+                child: Center(
+                  child: Icon(
+                    Icons.school_rounded,
+                    size: DesktopSidebarTokens.brandIconSize,
+                    color: foreground,
+                  ),
                 ),
               ),
-            ),
-          ],
-        ],
+              if (canShowLabel) ...[
+                const SizedBox(width: DesktopSidebarTokens.brandTextGap),
+                Expanded(
+                  child: Text(
+                    'TechPie',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      color: colorScheme.onSurface,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          );
+        },
       ),
     );
   }

@@ -5,6 +5,7 @@ import '../models/course_table.dart';
 import '../services/schedule_service.dart';
 import '../services/service_provider.dart';
 import '../widgets/desktop_popup.dart';
+import '../widgets/desktop_select_popover.dart';
 
 class SchedulePage extends StatefulWidget {
   const SchedulePage({super.key});
@@ -327,7 +328,6 @@ class _SchedulePageState extends State<SchedulePage> {
             if (isDesktopLayout(context))
               _DesktopWeekTitleMenu(
                 currentWeek: _currentWeek,
-                actualCurrentWeek: actualCurrentWeek,
                 semesterLabel: _semesterLabel,
                 slideDirection: _slideDirection,
                 onWeekChanged: _setWeek,
@@ -394,87 +394,85 @@ class _SchedulePageState extends State<SchedulePage> {
               ),
             )
           : _schedule.loading && _courses.isEmpty
-              ? const Center(child: CircularProgressIndicator())
-              : _schedule.error != null && _courses.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.error_outline,
-                            size: 48,
-                            color: theme.colorScheme.error,
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            '加载失败',
-                            style: theme.textTheme.bodyLarge?.copyWith(
-                              color: theme.colorScheme.error,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          FilledButton.tonal(
-                            onPressed: _refresh,
-                            child: const Text('重试'),
-                          ),
-                        ],
-                      ),
-                    )
-                  : RefreshIndicator(
-                      onRefresh: _refresh,
-                      child: Column(
-                        children: [
-                          _DayHeader(
-                            weekStart: _weekStart,
-                            today: today,
-                            visibleDays: _visibleDayIndices,
-                          ),
-                          const Divider(height: 1),
-                          Expanded(
-                            child: AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 300),
-                              switchInCurve: Curves.easeOut,
-                              switchOutCurve: Curves.easeIn,
-                              child: _courses
-                                      .where(
-                                        (c) => _visibleDayIndices.contains(
-                                          c.dayOfWeek,
-                                        ),
-                                      )
-                                      .isEmpty
-                                  ? ListView(
-                                      key: ValueKey<String>(
-                                        'empty-$_currentWeek',
-                                      ),
-                                      children: [
-                                        SizedBox(
-                                          height: 300,
-                                          child: Center(
-                                            child: Text(
-                                              '本周没有课程',
-                                              style: theme.textTheme.bodyLarge
-                                                  ?.copyWith(
-                                                color: theme.colorScheme
-                                                    .onSurfaceVariant,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    )
-                                  : _TimetableGrid(
-                                      key: ValueKey<int>(_currentWeek),
-                                      courses: _courses,
-                                      periods: _periods,
-                                      weekStart: _weekStart,
-                                      today: today,
-                                      visibleDays: _visibleDayIndices,
-                                    ),
-                            ),
-                          ),
-                        ],
-                      ),
+          ? const Center(child: CircularProgressIndicator())
+          : _schedule.error != null && _courses.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.error_outline,
+                    size: 48,
+                    color: theme.colorScheme.error,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    '加载失败',
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: theme.colorScheme.error,
                     ),
+                  ),
+                  const SizedBox(height: 8),
+                  FilledButton.tonal(
+                    onPressed: _refresh,
+                    child: const Text('重试'),
+                  ),
+                ],
+              ),
+            )
+          : RefreshIndicator(
+              onRefresh: _refresh,
+              child: Column(
+                children: [
+                  _DayHeader(
+                    weekStart: _weekStart,
+                    today: today,
+                    visibleDays: _visibleDayIndices,
+                  ),
+                  const Divider(height: 1),
+                  Expanded(
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      switchInCurve: Curves.easeOut,
+                      switchOutCurve: Curves.easeIn,
+                      child:
+                          _courses
+                              .where(
+                                (c) => _visibleDayIndices.contains(c.dayOfWeek),
+                              )
+                              .isEmpty
+                          ? ListView(
+                              key: ValueKey<String>('empty-$_currentWeek'),
+                              children: [
+                                SizedBox(
+                                  height: 300,
+                                  child: Center(
+                                    child: Text(
+                                      '本周没有课程',
+                                      style: theme.textTheme.bodyLarge
+                                          ?.copyWith(
+                                            color: theme
+                                                .colorScheme
+                                                .onSurfaceVariant,
+                                          ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            )
+                          : _TimetableGrid(
+                              key: ValueKey<int>(_currentWeek),
+                              courses: _courses,
+                              periods: _periods,
+                              weekStart: _weekStart,
+                              today: today,
+                              visibleDays: _visibleDayIndices,
+                            ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
     );
   }
 
@@ -599,65 +597,40 @@ class _SchedulePageState extends State<SchedulePage> {
 
 class _DesktopWeekTitleMenu extends StatelessWidget {
   final int currentWeek;
-  final int actualCurrentWeek;
   final String semesterLabel;
   final int slideDirection;
   final ValueChanged<int> onWeekChanged;
 
   const _DesktopWeekTitleMenu({
     required this.currentWeek,
-    required this.actualCurrentWeek,
     required this.semesterLabel,
     required this.slideDirection,
     required this.onWeekChanged,
   });
 
-  static const int _minWeek = 1;
-  static const int _maxWeek = 25;
-  static const double _menuItemTextWidth = 100;
+  static final List<int> _weeks = List<int>.generate(25, (index) => index + 1);
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return MenuAnchor(
-      menuChildren: [
-        for (int week = _minWeek; week <= _maxWeek; week++)
-          MenuItemButton(
-            onPressed: () => onWeekChanged(week),
-            leadingIcon: SizedBox(
-              width: 20,
-              child: week == currentWeek
-                  ? Icon(
-                      Icons.check_rounded,
-                      size: 20,
-                      color: colorScheme.primary,
-                    )
-                  : null,
-            ),
-            child: SizedBox(
-              width: _menuItemTextWidth,
-              child: Text('第 $week 周'),
-            ),
-          ),
-      ],
-      builder: (context, controller, child) {
+    return DesktopSelectPopover<int>(
+      items: _weeks,
+      value: currentWeek,
+      onChanged: onWeekChanged,
+      labelBuilder: (week) => '第 $week 周',
+      width: 200,
+      itemHeight: 56,
+      visibleItemCount: 5,
+      anchorBuilder: (context, isOpen, toggle) {
         return InkWell(
           borderRadius: BorderRadius.circular(12),
-          onTap: () {
-            if (controller.isOpen) {
-              controller.close();
-            } else {
-              controller.open();
-            }
-          },
+          onTap: toggle,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             child: _WeekTitleContent(
               currentWeek: currentWeek,
               semesterLabel: semesterLabel,
               slideDirection: slideDirection,
-              trailingIcon: controller.isOpen
+              trailingIcon: isOpen
                   ? Icons.expand_less_rounded
                   : Icons.expand_more_rounded,
             ),
@@ -699,10 +672,7 @@ class _WeekTitleContent extends StatelessWidget {
                   opacity: animation,
                   child: SlideTransition(
                     position: Tween<Offset>(
-                      begin: Offset(
-                        0,
-                        slideDirection >= 0 ? 0.3 : -0.3,
-                      ),
+                      begin: Offset(0, slideDirection >= 0 ? 0.3 : -0.3),
                       end: Offset.zero,
                     ).animate(animation),
                     child: child,
@@ -725,11 +695,7 @@ class _WeekTitleContent extends StatelessWidget {
           ],
         ),
         const SizedBox(width: 8),
-        Icon(
-          trailingIcon,
-          size: 20,
-          color: theme.colorScheme.onSurfaceVariant,
-        ),
+        Icon(trailingIcon, size: 20, color: theme.colorScheme.onSurfaceVariant),
       ],
     );
   }
