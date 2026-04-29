@@ -15,6 +15,8 @@ class DesktopWindowService with WindowListener {
 
   final SharedPreferences _prefs;
   Timer? _saveDebounce;
+  bool _listening = false;
+  bool _closed = false;
 
   static bool get isDesktop {
     if (kIsWeb) return false;
@@ -29,8 +31,10 @@ class DesktopWindowService with WindowListener {
   Future<void> initialize() async {
     if (!isDesktop) return;
 
+    _closed = false;
     await windowManager.ensureInitialized();
     windowManager.addListener(this);
+    _listening = true;
 
     final isMacOS = defaultTargetPlatform == TargetPlatform.macOS;
 
@@ -38,14 +42,23 @@ class DesktopWindowService with WindowListener {
       size: _initialSize,
       center: true,
       title: 'TechPie',
-      titleBarStyle:
-          isMacOS ? TitleBarStyle.hidden : TitleBarStyle.normal,
+      titleBarStyle: isMacOS ? TitleBarStyle.hidden : TitleBarStyle.normal,
     );
 
     await windowManager.waitUntilReadyToShow(windowOptions, () async {
       await windowManager.show();
       await windowManager.focus();
     });
+  }
+
+  void close() {
+    _closed = true;
+    _saveDebounce?.cancel();
+    _saveDebounce = null;
+
+    if (!isDesktop || !_listening) return;
+    windowManager.removeListener(this);
+    _listening = false;
   }
 
   Size get _initialSize {
@@ -68,18 +81,22 @@ class DesktopWindowService with WindowListener {
 
   @override
   void onWindowResize() {
+    if (_closed) return;
     _saveDebounce?.cancel();
     _saveDebounce = Timer(const Duration(milliseconds: 400), _saveSize);
   }
 
   @override
   void onWindowResized() {
+    if (_closed) return;
     _saveDebounce?.cancel();
     _saveSize();
   }
 
   Future<void> _saveSize() async {
+    if (_closed) return;
     final size = await windowManager.getSize();
+    if (_closed) return;
     if (!_isUsableDimension(size.width) || !_isUsableDimension(size.height)) {
       return;
     }

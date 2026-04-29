@@ -344,7 +344,7 @@ class _SchedulePageState extends State<SchedulePage> {
                   trailingIcon: Icons.unfold_more,
                 ),
               ),
-            if (!isViewingCurrentWeek) ...[
+            if (isDesktopLayout(context) && !isViewingCurrentWeek) ...[
               const SizedBox(width: 12),
               TextButton.icon(
                 onPressed: _goToCurrentWeek,
@@ -366,12 +366,37 @@ class _SchedulePageState extends State<SchedulePage> {
             tooltip: 'Next week',
             onPressed: _nextWeek,
           ),
-          IconButton(
-            key: _viewSettingsAnchorKey,
-            icon: const Icon(Icons.more_vert),
-            tooltip: '视图设置',
-            onPressed: _showViewSettingsMenu,
-          ),
+          if (isDesktopLayout(context))
+            IconButton(
+              key: _viewSettingsAnchorKey,
+              icon: const Icon(Icons.more_vert),
+              tooltip: '视图设置',
+              onPressed: _showViewSettingsMenu,
+            )
+          else
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert),
+              tooltip: '视图设置',
+              onSelected: _onMenuSelected,
+              itemBuilder: (context) => [
+                const PopupMenuItem(value: 'semester', child: Text('切换学期')),
+                CheckedPopupMenuItem(
+                  value: 'saturday',
+                  checked: _showSaturday,
+                  child: const Text('显示周六'),
+                ),
+                CheckedPopupMenuItem(
+                  value: 'sunday',
+                  checked: _showSunday,
+                  child: const Text('显示周日'),
+                ),
+                CheckedPopupMenuItem(
+                  value: 'ghost',
+                  checked: _showGhostCourses,
+                  child: const Text('显示非本周课程'),
+                ),
+              ],
+            ),
         ],
       ),
       body: !auth.isLoggedIn
@@ -494,34 +519,6 @@ class _SchedulePageState extends State<SchedulePage> {
   }
 
   void _showViewSettingsMenu() {
-    if (!isDesktopLayout(context)) {
-      showMenu<String>(
-        context: context,
-        position: const RelativeRect.fromLTRB(1, 1, 0, 0),
-        items: [
-          const PopupMenuItem(value: 'semester', child: Text('切换学期')),
-          CheckedPopupMenuItem(
-            value: 'saturday',
-            checked: _showSaturday,
-            child: const Text('显示周六'),
-          ),
-          CheckedPopupMenuItem(
-            value: 'sunday',
-            checked: _showSunday,
-            child: const Text('显示周日'),
-          ),
-          CheckedPopupMenuItem(
-            value: 'ghost',
-            checked: _showGhostCourses,
-            child: const Text('显示非本周课程'),
-          ),
-        ],
-      ).then((value) {
-        if (value != null) _onMenuSelected(value);
-      });
-      return;
-    }
-
     final anchorContext = _viewSettingsAnchorKey.currentContext;
     if (anchorContext == null) return;
 

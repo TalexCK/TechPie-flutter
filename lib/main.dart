@@ -48,6 +48,7 @@ void main() async {
 
   runApp(
     TechPieApp(
+      desktopWindowService: desktopWindowService,
       authService: authService,
       debugLogger: debugLogger,
       storageService: storageService,
@@ -58,7 +59,8 @@ void main() async {
   );
 }
 
-class TechPieApp extends StatelessWidget {
+class TechPieApp extends StatefulWidget {
+  final DesktopWindowService desktopWindowService;
   final AuthService authService;
   final DebugLogger debugLogger;
   final StorageService storageService;
@@ -68,6 +70,7 @@ class TechPieApp extends StatelessWidget {
 
   const TechPieApp({
     super.key,
+    required this.desktopWindowService,
     required this.authService,
     required this.debugLogger,
     required this.storageService,
@@ -77,21 +80,46 @@ class TechPieApp extends StatelessWidget {
   });
 
   @override
+  State<TechPieApp> createState() => _TechPieAppState();
+}
+
+class _TechPieAppState extends State<TechPieApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.detached) {
+      widget.desktopWindowService.close();
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    widget.desktopWindowService.close();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: themeService,
+      listenable: widget.themeService,
       builder: (context, _) => ServiceProvider(
-        authService: authService,
-        debugLogger: debugLogger,
-        storageService: storageService,
-        themeService: themeService,
-        scheduleService: scheduleService,
-        assignmentService: assignmentService,
+        authService: widget.authService,
+        debugLogger: widget.debugLogger,
+        storageService: widget.storageService,
+        themeService: widget.themeService,
+        scheduleService: widget.scheduleService,
+        assignmentService: widget.assignmentService,
         child: MaterialApp(
           title: 'TechPie',
-          theme: themeService.lightTheme,
-          darkTheme: themeService.darkTheme,
-          themeMode: themeService.themeMode,
+          theme: widget.themeService.lightTheme,
+          darkTheme: widget.themeService.darkTheme,
+          themeMode: widget.themeService.themeMode,
           home: const AppShell(),
         ),
       ),
