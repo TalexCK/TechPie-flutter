@@ -1,27 +1,24 @@
-import 'package:flutter/foundation.dart';
-import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'pages/assignments_page.dart';
-import 'pages/home_page.dart';
-import 'pages/schedule_page.dart';
-import 'pages/settings_page.dart';
 import 'services/assignment_service.dart';
 import 'services/auth_service.dart';
+import 'services/desktop_window_service.dart';
 import 'services/debug_logger.dart';
 import 'services/http_client.dart';
 import 'services/schedule_service.dart';
 import 'services/service_provider.dart';
 import 'services/storage_service.dart';
 import 'services/theme_service.dart';
-import 'widgets/ios_liquid/ios_glass_floating_button.dart';
-import 'widgets/ios_liquid/ios_glass_tab_bar.dart';
+import 'widgets/app_shell/app_shell.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   final prefs = await SharedPreferences.getInstance();
+  final desktopWindowService = DesktopWindowService(prefs);
+  await desktopWindowService.initialize();
+
   final storageService = StorageService(prefs);
   final debugLogger = DebugLogger()..enabled = storageService.debugMode;
   final httpClient = LoggingHttpClient(debugLogger);
@@ -51,6 +48,7 @@ void main() async {
 
   runApp(
     TechPieApp(
+      desktopWindowService: desktopWindowService,
       authService: authService,
       debugLogger: debugLogger,
       storageService: storageService,
@@ -61,7 +59,8 @@ void main() async {
   );
 }
 
-class TechPieApp extends StatelessWidget {
+class TechPieApp extends StatefulWidget {
+  final DesktopWindowService desktopWindowService;
   final AuthService authService;
   final DebugLogger debugLogger;
   final StorageService storageService;
@@ -71,6 +70,7 @@ class TechPieApp extends StatelessWidget {
 
   const TechPieApp({
     super.key,
+    required this.desktopWindowService,
     required this.authService,
     required this.debugLogger,
     required this.storageService,
@@ -80,138 +80,49 @@ class TechPieApp extends StatelessWidget {
   });
 
   @override
+  State<TechPieApp> createState() => _TechPieAppState();
+}
+
+class _TechPieAppState extends State<TechPieApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.detached) {
+      widget.desktopWindowService.close();
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    widget.desktopWindowService.close();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: themeService,
+      listenable: widget.themeService,
       builder: (context, _) => ServiceProvider(
-        authService: authService,
-        debugLogger: debugLogger,
-        storageService: storageService,
-        themeService: themeService,
-        scheduleService: scheduleService,
-        assignmentService: assignmentService,
+        authService: widget.authService,
+        debugLogger: widget.debugLogger,
+        storageService: widget.storageService,
+        themeService: widget.themeService,
+        scheduleService: widget.scheduleService,
+        assignmentService: widget.assignmentService,
         child: MaterialApp(
           title: 'TechPie',
-          theme: themeService.lightTheme,
-          darkTheme: themeService.darkTheme,
-          themeMode: themeService.themeMode,
+          theme: widget.themeService.lightTheme,
+          darkTheme: widget.themeService.darkTheme,
+          themeMode: widget.themeService.themeMode,
           home: const AppShell(),
         ),
       ),
     );
-  }
-}
-
-class AppShell extends StatefulWidget {
-  const AppShell({super.key});
-
-  @override
-  State<AppShell> createState() => _AppShellState();
-}
-
-class _AppShellState extends State<AppShell> {
-  static const int _assignmentsIndex = 2;
-
-  int _selectedIndex = 0;
-
-  bool get _usesIosLiquidGlass =>
-      !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
-
-  static const List<IosGlassTabBarItem> _navigationItems = [
-    IosGlassTabBarItem(
-      label: 'Home',
-      icon: Icons.home_outlined,
-      selectedIcon: Icons.home,
-      sfSymbol: 'house',
-      selectedSfSymbol: 'house.fill',
-    ),
-    IosGlassTabBarItem(
-      label: 'Schedule',
-      icon: Icons.calendar_month_outlined,
-      selectedIcon: Icons.calendar_month,
-      sfSymbol: 'calendar',
-      selectedSfSymbol: 'calendar.circle.fill',
-    ),
-    IosGlassTabBarItem(
-      label: 'Assignments',
-      icon: Icons.assignment_outlined,
-      selectedIcon: Icons.assignment,
-      sfSymbol: 'checkmark.circle',
-      selectedSfSymbol: 'checkmark.circle.fill',
-    ),
-    IosGlassTabBarItem(
-      label: 'Settings',
-      icon: Icons.settings_outlined,
-      selectedIcon: Icons.settings,
-      sfSymbol: 'gearshape',
-      selectedSfSymbol: 'gearshape.fill',
-    ),
-  ];
-
-  static const List<Widget> _pages = [
-    HomePage(key: ValueKey('home')),
-    SchedulePage(key: ValueKey('schedule')),
-    AssignmentsPage(key: ValueKey('assignments')),
-    SettingsPage(key: ValueKey('settings')),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    final usesIosLiquidGlass = _usesIosLiquidGlass;
-
-    return Scaffold(
-      extendBody: true,
-      body: PageTransitionSwitcher(
-        duration: const Duration(milliseconds: 300),
-        transitionBuilder: (child, animation, secondaryAnimation) {
-          return FadeThroughTransition(
-            animation: animation,
-            secondaryAnimation: secondaryAnimation,
-            fillColor: Colors.transparent,
-            child: child,
-          );
-        },
-        child: _pages[_selectedIndex],
-      ),
-      floatingActionButton: _selectedIndex == _assignmentsIndex
-          ? usesIosLiquidGlass
-                ? IosGlassFloatingButton(
-                    onPressed: () {},
-                    icon: Icons.add,
-                    sfSymbol: 'plus',
-                  )
-                : FloatingActionButton(
-                    onPressed: () {},
-                    child: const Icon(Icons.add),
-                  )
-          : null,
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      bottomNavigationBar: usesIosLiquidGlass
-          ? IosGlassTabBar(
-              selectedIndex: _selectedIndex,
-              items: _navigationItems,
-              onSelected: _handleSelectedIndexChanged,
-            )
-          : NavigationBar(
-              selectedIndex: _selectedIndex,
-              onDestinationSelected: _handleSelectedIndexChanged,
-              destinations: [
-                for (final item in _navigationItems)
-                  NavigationDestination(
-                    icon: Icon(item.icon),
-                    selectedIcon: Icon(item.selectedIcon),
-                    label: item.label,
-                  ),
-              ],
-            ),
-    );
-  }
-
-  void _handleSelectedIndexChanged(int index) {
-    if (index == _selectedIndex) return;
-
-    setState(() {
-      _selectedIndex = index;
-    });
   }
 }

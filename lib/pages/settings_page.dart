@@ -3,6 +3,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 
 import '../services/service_provider.dart';
 import '../services/theme_service.dart';
+import '../widgets/desktop_popup.dart';
 import 'debug_log_page.dart';
 import 'login_page.dart';
 
@@ -88,11 +89,13 @@ class _SettingsPageState extends State<SettingsPage> {
 
             // Appearance section
             _sectionHeader(theme, 'Appearance'),
-            ListTile(
-              leading: Icon(themeService.mode.icon),
-              title: const Text('Theme'),
-              subtitle: Text(themeService.mode.label),
-              onTap: () => _showThemePicker(context, themeService),
+            Builder(
+              builder: (tileContext) => ListTile(
+                leading: Icon(themeService.mode.icon),
+                title: const Text('Theme'),
+                subtitle: Text(themeService.mode.label),
+                onTap: () => _showThemePicker(tileContext, themeService),
+              ),
             ),
             const Divider(),
 
@@ -155,6 +158,59 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   void _showThemePicker(BuildContext context, ThemeService themeService) {
+    if (isDesktopLayout(context)) {
+      showDesktopPopover(
+        anchorContext: context,
+        width: 260,
+        placement: DesktopPopoverPlacement.belowEnd,
+        offset: const Offset(0, 8),
+        builder: (context, close) {
+          final theme = Theme.of(context);
+          return DesktopPopoverSurface(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+                  child: Text(
+                    'Choose theme',
+                    style: theme.textTheme.titleSmall,
+                  ),
+                ),
+                const Divider(height: 1),
+                for (final mode in AppThemeMode.values)
+                  DesktopMenuRow(
+                    leading: Icon(mode.icon, size: 20),
+                    title: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            mode.label,
+                            style: theme.textTheme.bodyMedium,
+                          ),
+                        ),
+                        if (themeService.mode == mode)
+                          Icon(
+                            Icons.check,
+                            size: 20,
+                            color: theme.colorScheme.primary,
+                          ),
+                      ],
+                    ),
+                    onTap: () {
+                      themeService.setMode(mode);
+                      close();
+                    },
+                  ),
+              ],
+            ),
+          );
+        },
+      );
+      return;
+    }
+
     showModalBottomSheet(
       context: context,
       builder: (context) => SafeArea(

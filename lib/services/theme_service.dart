@@ -75,7 +75,7 @@ class ThemeService extends ChangeNotifier {
     );
 
     if (!_usesIosTheme) {
-      return base;
+      return _buildDesktopTheme(base);
     }
 
     return _buildIosTheme(base, brightness: Brightness.light);
@@ -108,16 +108,23 @@ class ThemeService extends ChangeNotifier {
           surfaceContainerHighest: const Color(0xFF222222),
         ),
         scaffoldBackgroundColor: Colors.black,
+        appBarTheme: const AppBarTheme(centerTitle: false),
       );
     }
 
     final theme = ThemeData(useMaterial3: true, colorScheme: base);
 
     if (!_usesIosTheme) {
-      return theme;
+      return _buildDesktopTheme(theme);
     }
 
     return _buildIosTheme(theme, brightness: Brightness.dark);
+  }
+
+  ThemeData _buildDesktopTheme(ThemeData base) {
+    return base.copyWith(
+      appBarTheme: base.appBarTheme.copyWith(centerTitle: false),
+    );
   }
 
   ThemeData _buildIosTheme(

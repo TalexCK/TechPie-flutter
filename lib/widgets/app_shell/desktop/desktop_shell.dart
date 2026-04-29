@@ -1,0 +1,63 @@
+import 'dart:math' as math;
+
+import 'package:flutter/material.dart';
+
+import '../app_destination.dart';
+import 'desktop_sidebar.dart';
+import 'desktop_sidebar_tokens.dart';
+
+class DesktopShell extends StatelessWidget {
+  final List<AppDestination> destinations;
+  final int selectedIndex;
+  final bool sidebarCollapsed;
+  final bool showToggleButton;
+  final ValueChanged<int> onDestinationSelected;
+  final VoidCallback onToggleSidebarCollapsed;
+  final Widget child;
+
+  const DesktopShell({
+    super.key,
+    required this.destinations,
+    required this.selectedIndex,
+    required this.sidebarCollapsed,
+    this.showToggleButton = true,
+    required this.onDestinationSelected,
+    required this.onToggleSidebarCollapsed,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final sidebarWidth = sidebarCollapsed
+              ? DesktopSidebarTokens.collapsedWidth
+              : math.min(
+                  constraints.maxWidth *
+                      DesktopSidebarTokens.expandedWidthFactor,
+                  DesktopSidebarTokens.maxExpandedWidth,
+                );
+          return Row(
+            children: [
+              AnimatedContainer(
+                duration: DesktopSidebarTokens.widthAnimationDuration,
+                curve: DesktopSidebarTokens.widthAnimationCurve,
+                width: sidebarWidth,
+                child: DesktopSidebar(
+                    destinations: destinations,
+                    selectedIndex: selectedIndex,
+                    collapsed: sidebarCollapsed,
+                    showToggleButton: showToggleButton,
+                    onSelected: onDestinationSelected,
+                    onToggleCollapsed: onToggleSidebarCollapsed,
+                  ),
+              ),
+              Expanded(child: SizedBox.expand(child: child)),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
