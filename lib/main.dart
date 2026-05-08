@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'models/third_party_account.dart';
 import 'services/assignment_service.dart';
 import 'services/auth_service.dart';
 import 'services/debug_logger.dart';
@@ -13,6 +14,15 @@ import 'services/storage_service.dart';
 import 'services/theme_service.dart';
 import 'services/third_party_auth_service.dart';
 import 'widgets/app_shell/app_shell.dart';
+
+final GlobalKey<ScaffoldMessengerState> rootMessengerKey =
+    GlobalKey<ScaffoldMessengerState>();
+
+void _toast(String msg) {
+  rootMessengerKey.currentState
+    ?..clearSnackBars()
+    ..showSnackBar(SnackBar(content: Text(msg)));
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -62,18 +72,33 @@ void main() async {
     ),
   );
 
-  // -- Background: every network call is fire-and-forget. UI updates via
-  // notifyListeners as each request resolves, so a slow / down backend
-  // never blocks the splash. --
-  if (authService.isLoggedIn) {
-    unawaited(authService.tryRenewSession());
-    unawaited(scheduleService.fetchAll());
-  }
-  if (authService.isLoggedIn ||
-      thirdPartyAuthService.boundPlatforms.isNotEmpty) {
-    unawaited(assignmentService.fetchAssignments());
-  }
-  unawaited(thirdPartyAuthService.autoRenewIfNeeded());
+  // -- Background: renew tokens first (main session + third-party in
+  // parallel — they touch independent state), then fan out fetches that
+  // depend on those tokens. The whole block is unawaited so the splash
+  // never blocks. --
+  unawaited(() async {
+    final renewMain = authService.isLoggedIn
+        ? authService.tryRenewSession()
+        : Future.value(true);
+    final renewThirdParty = thirdPartyAuthService.autoRenewIfNeeded();
+
+    final results = await Future.wait([renewMain, renewThirdParty]);
+    final mainOk = results[0] as bool;
+    final failedTp = results[1] as List<ThirdPartyPlatform>;
+
+    if (!mainOk) _toast('登录已过期,请重新登录');
+    if (failedTp.isNotEmpty) {
+      _toast('${failedTp.map((p) => p.label).join('、')} 续期失败');
+    }
+
+    if (authService.isLoggedIn) {
+      unawaited(scheduleService.fetchAll());
+    }
+    if (authService.isLoggedIn ||
+        thirdPartyAuthService.boundPlatforms.isNotEmpty) {
+      unawaited(assignmentService.fetchAssignments());
+    }
+  }());
   // Allow auto-refetch on subsequent auth / binding changes
   // (login, bind, unbind, logout).
   assignmentService.enableAutoRefetch();
@@ -117,6 +142,7 @@ class _TechPieAppState extends State<TechPieApp> {
         assignmentService: widget.assignmentService,
         thirdPartyAuthService: widget.thirdPartyAuthService,
         child: MaterialApp(
+          scaffoldMessengerKey: rootMessengerKey,
           title: 'TechPie',
           theme: widget.themeService.lightTheme,
           darkTheme: widget.themeService.darkTheme,
