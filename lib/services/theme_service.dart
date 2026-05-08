@@ -108,7 +108,12 @@ class ThemeService extends ChangeNotifier {
           surfaceContainerHighest: const Color(0xFF222222),
         ),
         scaffoldBackgroundColor: Colors.black,
-        appBarTheme: const AppBarTheme(centerTitle: false),
+        appBarTheme: const AppBarTheme(
+          centerTitle: false,
+          elevation: 0.5,
+          scrolledUnderElevation: 0.5,
+          surfaceTintColor: Colors.transparent,
+        ),
       );
     }
 
@@ -123,7 +128,12 @@ class ThemeService extends ChangeNotifier {
 
   ThemeData _buildDesktopTheme(ThemeData base) {
     return base.copyWith(
-      appBarTheme: base.appBarTheme.copyWith(centerTitle: false),
+      appBarTheme: base.appBarTheme.copyWith(
+        centerTitle: false,
+        elevation: 0.5,
+        scrolledUnderElevation: 0.5,
+        surfaceTintColor: Colors.transparent,
+      ),
     );
   }
 
@@ -202,7 +212,8 @@ class ThemeService extends ChangeNotifier {
         backgroundColor: background,
         foregroundColor: isDark ? Colors.white : Colors.black,
         surfaceTintColor: Colors.transparent,
-        elevation: 0,
+        elevation: 0.5,
+        scrolledUnderElevation: 0.5,
       ),
       snackBarTheme: SnackBarThemeData(
         backgroundColor: surfaceHighest,

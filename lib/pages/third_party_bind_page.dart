@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/third_party_account.dart';
 import '../services/service_provider.dart';
 import '../services/third_party_auth_service.dart';
+import '../widgets/blurred_app_bar.dart';
 
 class ThirdPartyBindPage extends StatefulWidget {
   final ThirdPartyPlatform platform;
@@ -109,11 +110,17 @@ class _ThirdPartyBindPageState extends State<ThirdPartyBindPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Bind ${widget.platform.label}')),
+      extendBodyBehindAppBar: true,
+      appBar: BlurredAppBar(title: Text('Bind ${widget.platform.label}')),
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.fromLTRB(
+            16,
+            16 + kToolbarHeight + MediaQuery.viewPaddingOf(context).top,
+            16,
+            16,
+          ),
           children: [
             TextFormField(
               controller: _accountCtrl,

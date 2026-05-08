@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../models/third_party_account.dart';
 import '../services/service_provider.dart';
+import '../widgets/blurred_app_bar.dart';
 import 'login_page.dart';
 import 'third_party_bind_page.dart';
 
@@ -17,12 +18,16 @@ class ThirdPartyAccountsPage extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Linked Accounts')),
+      extendBodyBehindAppBar: true,
+      appBar: const BlurredAppBar(title: Text('Linked Accounts')),
       body: ListenableBuilder(
         listenable: Listenable.merge([tpAuth, auth]),
         builder: (context, _) {
           return ListView(
-            padding: const EdgeInsets.only(bottom: 120),
+            padding: EdgeInsets.only(
+              top: kToolbarHeight + MediaQuery.viewPaddingOf(context).top,
+              bottom: 120,
+            ),
             children: [
               // Blackboard read-only entry
               _BlackboardTile(),

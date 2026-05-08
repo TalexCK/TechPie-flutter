@@ -6,6 +6,7 @@ import '../models/assignment.dart';
 import '../models/assignment_overrides.dart';
 import '../services/assignment_service.dart';
 import '../services/service_provider.dart';
+import '../widgets/blurred_app_bar.dart';
 import '../widgets/swipeable_card.dart';
 import 'hidden_assignments_page.dart';
 import 'third_party_accounts_page.dart';
@@ -85,6 +86,7 @@ class _AssignmentsPageState extends State<AssignmentsPage> {
       builder: (context, _) {
         final visible = assignmentService.visibleAssignments;
         return Scaffold(
+          extendBodyBehindAppBar: true,
           appBar: _selectionMode
               ? _buildSelectionAppBar(context, assignmentService, visible)
               : _buildNormalAppBar(context, assignmentService),
@@ -104,7 +106,7 @@ class _AssignmentsPageState extends State<AssignmentsPage> {
     BuildContext context,
     AssignmentService service,
   ) {
-    return AppBar(
+    return BlurredAppBar(
       title: const Text('Deadlines'),
       actions: [
         PopupMenuButton<String>(
@@ -145,7 +147,7 @@ class _AssignmentsPageState extends State<AssignmentsPage> {
   ) {
     final allSelected =
         visible.isNotEmpty && _selected.length == visible.length;
-    return AppBar(
+    return BlurredAppBar(
       leading: IconButton(
         icon: const Icon(Icons.close),
         onPressed: _exitSelection,
@@ -180,10 +182,12 @@ class _AssignmentsPageState extends State<AssignmentsPage> {
     List<Assignment> visible,
   ) {
     final banner = _PlatformErrorsBanner(errors: service.platformErrors);
+    final topInset = kToolbarHeight + MediaQuery.viewPaddingOf(context).top;
 
     if (service.loading && visible.isEmpty) {
       return Column(
         children: [
+          SizedBox(height: topInset),
           banner,
           const Expanded(child: Center(child: CircularProgressIndicator())),
         ],
@@ -193,6 +197,7 @@ class _AssignmentsPageState extends State<AssignmentsPage> {
     if (visible.isEmpty) {
       return Column(
         children: [
+          SizedBox(height: topInset),
           banner,
           Expanded(
             child: RefreshIndicator(
@@ -214,6 +219,7 @@ class _AssignmentsPageState extends State<AssignmentsPage> {
 
     return Column(
       children: [
+        SizedBox(height: topInset),
         banner,
         Expanded(child: _buildList(context, service, visible)),
       ],

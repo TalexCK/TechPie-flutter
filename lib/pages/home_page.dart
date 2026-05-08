@@ -10,6 +10,7 @@ import '../models/course_table.dart';
 import '../services/assignment_service.dart';
 import '../services/schedule_service.dart';
 import '../services/service_provider.dart';
+import '../widgets/blurred_app_bar.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -254,9 +255,15 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     final isDebug = sp.storageService.debugMode;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Home')),
+      extendBodyBehindAppBar: true,
+      appBar: const BlurredAppBar(title: Text('Home')),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+        padding: EdgeInsets.fromLTRB(
+          16,
+          16 + kToolbarHeight + MediaQuery.viewPaddingOf(context).top,
+          16,
+          120,
+        ),
         children: [
           Card.filled(
             child: Padding(

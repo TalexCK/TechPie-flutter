@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../services/debug_logger.dart';
 import '../services/service_provider.dart';
+import '../widgets/blurred_app_bar.dart';
 
 class DebugLogPage extends StatelessWidget {
   const DebugLogPage({super.key});
@@ -11,7 +12,8 @@ class DebugLogPage extends StatelessWidget {
     final logger = ServiceProvider.of(context).debugLogger;
 
     return Scaffold(
-      appBar: AppBar(
+      extendBodyBehindAppBar: true,
+      appBar: BlurredAppBar(
         title: const Text('Debug Logs'),
         actions: [
           IconButton(
@@ -24,11 +26,17 @@ class DebugLogPage extends StatelessWidget {
       body: ListenableBuilder(
         listenable: logger,
         builder: (context, _) {
+          final topPad =
+              kToolbarHeight + MediaQuery.viewPaddingOf(context).top;
           final entries = logger.entries.reversed.toList();
           if (entries.isEmpty) {
-            return const Center(child: Text('No logs yet'));
+            return Padding(
+              padding: EdgeInsets.only(top: topPad),
+              child: const Center(child: Text('No logs yet')),
+            );
           }
           return ListView.builder(
+            padding: EdgeInsets.only(top: topPad),
             itemCount: entries.length,
             itemBuilder: (context, index) => _LogTile(entry: entries[index]),
           );

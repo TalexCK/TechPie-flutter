@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/assignment.dart';
 import '../models/assignment_overrides.dart';
 import '../services/service_provider.dart';
+import '../widgets/blurred_app_bar.dart';
 
 class HiddenAssignmentsPage extends StatelessWidget {
   const HiddenAssignmentsPage({super.key});
@@ -13,7 +14,8 @@ class HiddenAssignmentsPage extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
+      extendBodyBehindAppBar: true,
+      appBar: BlurredAppBar(
         title: const Text('已忽略的作业'),
         actions: [
           ListenableBuilder(
@@ -32,12 +34,17 @@ class HiddenAssignmentsPage extends StatelessWidget {
         listenable: service,
         builder: (context, _) {
           final hiddenKeys = service.overrides.hidden;
+          final topPad =
+              kToolbarHeight + MediaQuery.viewPaddingOf(context).top;
           if (hiddenKeys.isEmpty) {
-            return Center(
-              child: Text(
-                '没有被忽略的作业',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+            return Padding(
+              padding: EdgeInsets.only(top: topPad),
+              child: Center(
+                child: Text(
+                  '没有被忽略的作业',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ),
             );
@@ -51,6 +58,7 @@ class HiddenAssignmentsPage extends StatelessWidget {
           final entries = hiddenKeys.toList();
 
           return ListView.separated(
+            padding: EdgeInsets.only(top: topPad),
             itemCount: entries.length,
             separatorBuilder: (_, _) => const Divider(height: 1),
             itemBuilder: (context, i) {

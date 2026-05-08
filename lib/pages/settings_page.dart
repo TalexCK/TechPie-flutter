@@ -4,6 +4,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 
 import '../services/service_provider.dart';
 import '../services/theme_service.dart';
+import '../widgets/blurred_app_bar.dart';
 import '../widgets/desktop_popup.dart';
 import '../widgets/ios_liquid/ios_glass_select.dart';
 import '../widgets/ios_liquid/ios_glass_switch.dart';
@@ -50,11 +51,15 @@ class _SettingsPageState extends State<SettingsPage> {
         !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+      extendBodyBehindAppBar: true,
+      appBar: const BlurredAppBar(title: Text('Settings')),
       body: ListenableBuilder(
         listenable: Listenable.merge([auth, logger, themeService, tpAuth]),
         builder: (context, _) => ListView(
-          padding: const EdgeInsets.only(bottom: 120),
+          padding: EdgeInsets.only(
+            top: kToolbarHeight + MediaQuery.viewPaddingOf(context).top,
+            bottom: 120,
+          ),
           children: [
             // Account section
             _sectionHeader(theme, 'Account'),

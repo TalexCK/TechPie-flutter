@@ -5,6 +5,7 @@ import '../models/course.dart';
 import '../models/course_table.dart';
 import '../services/schedule_service.dart';
 import '../services/service_provider.dart';
+import '../widgets/blurred_app_bar.dart';
 import '../widgets/course_detail_panel.dart';
 import '../widgets/desktop_popup.dart';
 import '../widgets/desktop_select_popover.dart';
@@ -326,7 +327,8 @@ class _SchedulePageState extends State<SchedulePage> {
         !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
     return Scaffold(
-      appBar: AppBar(
+      extendBodyBehindAppBar: true,
+      appBar: BlurredAppBar(
         titleSpacing: 16,
         title: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
@@ -485,7 +487,11 @@ class _SchedulePageState extends State<SchedulePage> {
             ),
         ],
       ),
-      body: !auth.isLoggedIn
+      body: Padding(
+        padding: EdgeInsets.only(
+          top: kToolbarHeight + MediaQuery.viewPaddingOf(context).top,
+        ),
+        child: !auth.isLoggedIn
           ? Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -585,6 +591,7 @@ class _SchedulePageState extends State<SchedulePage> {
                 ],
               ),
             ),
+      ),
     );
   }
 
