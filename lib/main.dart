@@ -1,9 +1,9 @@
 import 'dart:async';
 
 import 'package:dynamic_color/dynamic_color.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:techpie/utils/platform.dart';
 
 import 'models/third_party_account.dart';
 import 'services/assignment_service.dart';
@@ -83,17 +83,14 @@ void main() async {
     final mainOk = results[0] as bool;
     final failedTp = results[1] as List<ThirdPartyPlatform>;
 
-    final usesIosFeedback =
-        !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
-
-    if (!mainOk && !usesIosFeedback) {
+    if (!mainOk && !isIos()) {
       showAdaptiveFeedback(
         message: '登录已过期，请重新登录',
         style: AdaptiveFeedbackStyle.error,
         duration: const Duration(seconds: 4),
       );
     }
-    if (failedTp.isNotEmpty && !usesIosFeedback) {
+    if (failedTp.isNotEmpty && !isIos()) {
       showAdaptiveFeedback(
         message: '${failedTp.map((p) => p.label).join('、')} 续期失败',
         style: AdaptiveFeedbackStyle.error,
@@ -141,10 +138,7 @@ class TechPieApp extends StatefulWidget {
 class _TechPieAppState extends State<TechPieApp> {
   @override
   Widget build(BuildContext context) {
-    final usesDynamicColor =
-        !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
-
-    if (!usesDynamicColor) {
+    if (!isAndroid()) {
       widget.themeService.updateSystemSchemes(null, null);
       return _buildApp();
     }
