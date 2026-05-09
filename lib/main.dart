@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:dynamic_color/dynamic_color.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -40,7 +41,10 @@ void main() async {
     httpClient,
     authService,
   );
-  final thirdPartyAuthService = ThirdPartyAuthService(storageService, httpClient);
+  final thirdPartyAuthService = ThirdPartyAuthService(
+    storageService,
+    httpClient,
+  );
   final assignmentService = AssignmentService(
     storageService,
     httpClient,
@@ -132,32 +136,44 @@ class TechPieApp extends StatefulWidget {
 class _TechPieAppState extends State<TechPieApp> {
   @override
   Widget build(BuildContext context) {
+    final usesDynamicColor =
+        !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+
+    if (!usesDynamicColor) {
+      widget.themeService.updateSystemSchemes(null, null);
+      return _buildApp();
+    }
+
     return DynamicColorBuilder(
       builder: (lightDynamic, darkDynamic) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           widget.themeService.updateSystemSchemes(lightDynamic, darkDynamic);
         });
-        return ListenableBuilder(
-          listenable: widget.themeService,
-          builder: (context, _) => ServiceProvider(
-            authService: widget.authService,
-            debugLogger: widget.debugLogger,
-            storageService: widget.storageService,
-            themeService: widget.themeService,
-            scheduleService: widget.scheduleService,
-            assignmentService: widget.assignmentService,
-            thirdPartyAuthService: widget.thirdPartyAuthService,
-            child: MaterialApp(
-              scaffoldMessengerKey: rootMessengerKey,
-              title: 'TechPie',
-              theme: widget.themeService.lightTheme,
-              darkTheme: widget.themeService.darkTheme,
-              themeMode: widget.themeService.themeMode,
-              home: const AppShell(),
-            ),
-          ),
-        );
+        return _buildApp();
       },
+    );
+  }
+
+  Widget _buildApp() {
+    return ListenableBuilder(
+      listenable: widget.themeService,
+      builder: (context, _) => ServiceProvider(
+        authService: widget.authService,
+        debugLogger: widget.debugLogger,
+        storageService: widget.storageService,
+        themeService: widget.themeService,
+        scheduleService: widget.scheduleService,
+        assignmentService: widget.assignmentService,
+        thirdPartyAuthService: widget.thirdPartyAuthService,
+        child: MaterialApp(
+          scaffoldMessengerKey: rootMessengerKey,
+          title: 'TechPie',
+          theme: widget.themeService.lightTheme,
+          darkTheme: widget.themeService.darkTheme,
+          themeMode: widget.themeService.themeMode,
+          home: const AppShell(),
+        ),
+      ),
     );
   }
 }
