@@ -135,6 +135,7 @@ class _IosGlassActionButtonState extends State<IosGlassActionButton> {
 
   void _onPlatformViewCreated(int viewId) {
     final channel = MethodChannel('$_channelPrefix/$viewId');
+    _channel?.setMethodCallHandler(null);
     _channel = channel;
 
     channel.setMethodCallHandler((call) async {
