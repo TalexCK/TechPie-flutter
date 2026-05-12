@@ -77,14 +77,14 @@ Future<T?> _showNativeIosAlert<T>({
         for (final action in actions)
           {
             'label': action.label,
-            'value': action.value,
             'isDestructive': action.isDestructive,
             'isDefault': action.isDefault,
           },
       ],
     });
 
-    return result as T?;
+    if (result is! int || result < 0 || result >= actions.length) return null;
+    return actions[result].value;
   } on PlatformException {
     if (!fallbackContext.mounted) return null;
 

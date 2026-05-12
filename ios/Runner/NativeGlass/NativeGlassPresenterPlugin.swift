@@ -60,18 +60,17 @@ final class NativeGlassPresenterPlugin: NSObject, FlutterPlugin {
       result(value)
     }
 
-    for actionData in rawActions {
+    for (index, actionData) in rawActions.enumerated() {
       guard let label = actionData["label"] as? String, !label.isEmpty else {
         continue
       }
 
       let isDestructive = actionData["isDestructive"] as? Bool ?? false
       let isDefault = actionData["isDefault"] as? Bool ?? false
-      let value = actionData["value"]
       let style: UIAlertAction.Style = isDestructive ? .destructive : .default
 
       let action = UIAlertAction(title: label, style: style) { _ in
-        complete(value)
+        complete(index)
       }
 
       if isDefault {
