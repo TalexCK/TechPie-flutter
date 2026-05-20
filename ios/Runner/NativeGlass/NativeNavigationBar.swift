@@ -262,16 +262,30 @@ final class NativeNavigationBarPlatformView: NSObject, FlutterPlatformView {
   @available(iOS 14.0, *)
   private func makeMenu(for item: NativeNavigationBarItem) -> UIMenu? {
     guard !item.menuItems.isEmpty else { return nil }
-    return UIMenu(children: item.menuItems.map { menuItem in
-      UIAction(
+    return UIMenu(children: item.menuItems.map { makeMenuElement($0, itemID: item.id) })
+  }
+
+  @available(iOS 14.0, *)
+  private func makeMenuElement(
+    _ menuItem: NativeNavigationBarMenuItem,
+    itemID: String
+  ) -> UIMenuElement {
+    if !menuItem.children.isEmpty {
+      return UIMenu(
         title: menuItem.title,
         image: symbolImage(named: menuItem.sfSymbol),
-        attributes: menuItem.destructive ? [.destructive] : [],
-        state: menuItem.checked ? .on : .off
-      ) { [weak self] _ in
-        self?.sendMenuSelected(item.id, value: menuItem.value)
-      }
-    })
+        children: menuItem.children.map { makeMenuElement($0, itemID: itemID) }
+      )
+    }
+
+    return UIAction(
+      title: menuItem.title,
+      image: symbolImage(named: menuItem.sfSymbol),
+      attributes: menuItem.destructive ? [.destructive] : [],
+      state: menuItem.checked ? .on : .off
+    ) { [weak self] _ in
+      self?.sendMenuSelected(itemID, value: menuItem.value)
+    }
   }
 
   private func symbolImage(named systemName: String?) -> UIImage? {
@@ -352,6 +366,7 @@ private struct NativeNavigationBarMenuItem {
   let sfSymbol: String?
   let checked: Bool
   let destructive: Bool
+  let children: [NativeNavigationBarMenuItem]
 
   init(_ params: [String: Any]) {
     value = params["value"] as? String ?? ""
@@ -359,5 +374,7 @@ private struct NativeNavigationBarMenuItem {
     sfSymbol = params["sfSymbol"] as? String
     checked = params["checked"] as? Bool ?? false
     destructive = params["destructive"] as? Bool ?? false
+    children = (params["children"] as? [[String: Any]] ?? [])
+      .map(NativeNavigationBarMenuItem.init)
   }
 }

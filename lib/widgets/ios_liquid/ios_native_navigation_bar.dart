@@ -5,10 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:techpie/utils/platform.dart';
 
-// TODO: Handle the transition animation
-// I don't know how to handle the transition animation of buttons
-// within a group. It is sooooo mysterious...
-
 enum IosNativeNavigationBarItemRole { normal, done, destructive }
 
 class IosNativeNavigationBarItem {
@@ -56,6 +52,7 @@ class IosNativeNavigationBarMenuItem {
     this.sfSymbol,
     this.checked = false,
     this.destructive = false,
+    this.children = const [],
   });
 
   final String value;
@@ -63,6 +60,7 @@ class IosNativeNavigationBarMenuItem {
   final String? sfSymbol;
   final bool checked;
   final bool destructive;
+  final List<IosNativeNavigationBarMenuItem> children;
 
   Map<String, Object?> toMap() {
     return <String, Object?>{
@@ -71,6 +69,7 @@ class IosNativeNavigationBarMenuItem {
       'sfSymbol': sfSymbol,
       'checked': checked,
       'destructive': destructive,
+      'children': children.map((item) => item.toMap()).toList(),
     };
   }
 }
@@ -99,7 +98,9 @@ class IosNativeNavigationBar extends StatefulWidget
   final void Function(String id, String value)? onMenuSelected;
 
   @override
-  Size get preferredSize => Size.fromHeight(adaptiveTopBarHeight());
+  Size get preferredSize => Size.fromHeight(_barHeight);
+
+  double get _barHeight => subtitle == null || subtitle!.isEmpty ? 44.0 : 56.0;
 
   @override
   State<IosNativeNavigationBar> createState() => _IosNativeNavigationBarState();
@@ -132,7 +133,7 @@ class _IosNativeNavigationBarState extends State<IosNativeNavigationBar> {
     return SafeArea(
       bottom: false,
       child: SizedBox(
-        height: adaptiveTopBarHeight(),
+        height: widget._barHeight,
         child: UiKitView(
           viewType: _viewType,
           layoutDirection: Directionality.of(context),
