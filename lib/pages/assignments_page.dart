@@ -83,14 +83,17 @@ class _AssignmentsPageState extends State<AssignmentsPage> {
   @override
   Widget build(BuildContext context) {
     final assignmentService = ServiceProvider.of(context).assignmentService;
-    final topInset = kToolbarHeight + MediaQuery.viewPaddingOf(context).top;
+    final useLegacyIosChrome = usesLegacyIosChrome();
+    final topInset = useLegacyIosChrome
+        ? 0.0
+        : adaptiveTopBarHeight() + MediaQuery.viewPaddingOf(context).top;
 
     return ListenableBuilder(
       listenable: assignmentService,
       builder: (context, _) {
         final visible = assignmentService.visibleAssignments;
         return Scaffold(
-          extendBodyBehindAppBar: true,
+          extendBodyBehindAppBar: !useLegacyIosChrome,
           appBar: _selectionMode
               ? _buildSelectionAppBar(context, assignmentService, visible)
               : _buildNormalAppBar(context, assignmentService),
@@ -523,7 +526,7 @@ class _PlatformErrorsBanner extends StatelessWidget {
     final errors = service.platformErrors;
     if (errors.isEmpty) return const SizedBox.shrink();
     final theme = Theme.of(context);
-    
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: errors.entries.map((entry) {

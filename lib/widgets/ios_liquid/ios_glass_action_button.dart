@@ -1,8 +1,9 @@
 import 'dart:async';
+import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:techpie/utils/platform.dart';
 
 enum IosGlassActionButtonVariant { automatic, glass, clearGlass }
 
@@ -16,8 +17,7 @@ class IosGlassActionButton extends StatefulWidget {
     this.destructive = false,
     this.enabled = true,
     this.width,
-    this.height = 36,
-    this.animateOnAppear = false,
+    this.height = 44,
     this.variant = IosGlassActionButtonVariant.automatic,
   });
 
@@ -29,7 +29,6 @@ class IosGlassActionButton extends StatefulWidget {
   final bool enabled;
   final double? width;
   final double height;
-  final bool animateOnAppear;
   final IosGlassActionButtonVariant variant;
 
   @override
@@ -39,8 +38,7 @@ class IosGlassActionButton extends StatefulWidget {
 class _IosGlassActionButtonState extends State<IosGlassActionButton> {
   MethodChannel? _channel;
 
-  bool get _usesNative =>
-      !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+  bool get _usesNative => isIos();
 
   @override
   void dispose() {
@@ -73,13 +71,12 @@ class _IosGlassActionButtonState extends State<IosGlassActionButton> {
       );
     }
 
-    final width =
-        widget.width ??
-        ((widget.label == null || widget.label!.isEmpty) ? 36.0 : 92.0);
+    final width = widget.width ?? _intrinsicWidth(context);
+    final height = _scaledHeight(context);
 
     return SizedBox(
       width: width,
-      height: widget.height,
+      height: height,
       child: UiKitView(
         viewType: _viewType,
         layoutDirection: Directionality.of(context),
@@ -88,13 +85,42 @@ class _IosGlassActionButtonState extends State<IosGlassActionButton> {
           'sfSymbol': widget.sfSymbol,
           'destructive': widget.destructive,
           'enabled': widget.enabled,
-          'animateOnAppear': widget.animateOnAppear,
           'glassVariant': widget.variant.name,
         },
         creationParamsCodec: const StandardMessageCodec(),
         onPlatformViewCreated: _onPlatformViewCreated,
       ),
     );
+  }
+
+  double _intrinsicWidth(BuildContext context) {
+    final label = widget.label;
+    final hasLabel = label != null && label.isNotEmpty;
+    final textScaler = MediaQuery.textScalerOf(context);
+
+    if (!hasLabel) {
+      return math.max(44, textScaler.scale(36));
+    }
+
+    final style = DefaultTextStyle.of(context).style.copyWith(
+          fontSize: 17,
+          fontWeight: FontWeight.w400,
+        );
+    final painter = TextPainter(
+      text: TextSpan(text: label, style: style),
+      textDirection: Directionality.of(context),
+      textScaler: textScaler,
+      maxLines: 1,
+    )..layout();
+
+    final hasIcon = widget.sfSymbol != 'none' || widget.icon != null;
+    final iconWidth = hasIcon ? textScaler.scale(18) + 6 : 0;
+    return math.max(44, painter.width + iconWidth + textScaler.scale(32));
+  }
+
+  double _scaledHeight(BuildContext context) {
+    final scaledBody = MediaQuery.textScalerOf(context).scale(17);
+    return math.max(widget.height, scaledBody + 20);
   }
 
   @override
@@ -105,8 +131,7 @@ class _IosGlassActionButtonState extends State<IosGlassActionButton> {
     final channel = _channel;
     if (channel == null) return;
 
-    final changed =
-        oldWidget.label != widget.label ||
+    final changed = oldWidget.label != widget.label ||
         oldWidget.sfSymbol != widget.sfSymbol ||
         oldWidget.destructive != widget.destructive ||
         oldWidget.enabled != widget.enabled ||

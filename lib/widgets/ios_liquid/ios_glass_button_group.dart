@@ -1,6 +1,6 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:techpie/utils/platform.dart';
 
 class IosGlassButtonGroupButton {
   const IosGlassButtonGroupButton({
@@ -37,8 +37,7 @@ class IosGlassButtonGroup extends StatefulWidget {
 class _IosGlassButtonGroupState extends State<IosGlassButtonGroup> {
   MethodChannel? _channel;
 
-  bool get _usesNative =>
-      !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+  bool get _usesNative => isIos();
 
   @override
   void dispose() {
@@ -91,24 +90,27 @@ class _IosGlassButtonGroupState extends State<IosGlassButtonGroup> {
   }
 
   Widget _buildFallback(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (final button in widget.buttons)
-            Expanded(
-              child: IconButton(
-                tooltip: button.tooltip,
-                icon: Icon(button.icon, size: 18),
-                onPressed: () => widget.onPressed(button.id),
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (final button in widget.buttons)
+          SizedBox(
+            width: widget.width == null
+                ? 44
+                : widget.width! / widget.buttons.length,
+            height: widget.height,
+            child: IconButton(
+              tooltip: button.tooltip,
+              icon: Icon(button.icon, size: 20),
+              style: IconButton.styleFrom(
+                backgroundColor: Colors.transparent,
+                foregroundColor: Theme.of(context).colorScheme.primary,
+                shape: const CircleBorder(),
               ),
+              onPressed: () => widget.onPressed(button.id),
             ),
-        ],
-      ),
+          ),
+      ],
     );
   }
 

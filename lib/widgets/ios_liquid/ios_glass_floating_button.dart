@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:techpie/utils/platform.dart';
 
 class IosGlassFloatingButton extends StatefulWidget {
   const IosGlassFloatingButton({
@@ -37,6 +38,13 @@ class _IosGlassFloatingButtonState extends State<IosGlassFloatingButton> {
 
   @override
   Widget build(BuildContext context) {
+    if (!isIos()) {
+      return FloatingActionButton(
+        onPressed: widget.onPressed,
+        child: Icon(widget.icon),
+      );
+    }
+
     return SizedBox.square(
       dimension: 64,
       child: UiKitView(

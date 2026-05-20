@@ -49,10 +49,13 @@ class _SettingsPageState extends State<SettingsPage> {
     final storage = sp.storageService;
     final themeService = sp.themeService;
     final tpAuth = sp.thirdPartyAuthService;
-    final topInset = kToolbarHeight + MediaQuery.viewPaddingOf(context).top;
+    final useLegacyIosChrome = usesLegacyIosChrome();
+    final topInset = useLegacyIosChrome
+        ? 0.0
+        : adaptiveTopBarHeight() + MediaQuery.viewPaddingOf(context).top;
 
     return Scaffold(
-      extendBodyBehindAppBar: true,
+      extendBodyBehindAppBar: !useLegacyIosChrome,
       appBar: const BlurredAppBar(title: Text('Settings')),
       body: ListenableBuilder(
         listenable: Listenable.merge([auth, logger, themeService, tpAuth]),

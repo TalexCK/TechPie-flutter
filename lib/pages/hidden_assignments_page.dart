@@ -63,7 +63,11 @@ class _HiddenAssignmentsPageState extends State<HiddenAssignmentsPage> {
   Widget build(BuildContext context) {
     final service = ServiceProvider.of(context).assignmentService;
     final theme = Theme.of(context);
-    final topPad = kToolbarHeight + MediaQuery.viewPaddingOf(context).top;
+    final useLiquidGlass = usesIosLiquidGlass();
+    final useLegacyIosChrome = usesLegacyIosChrome();
+    final topPad = useLegacyIosChrome
+        ? 0.0
+        : adaptiveTopBarHeight() + MediaQuery.viewPaddingOf(context).top;
 
     return ListenableBuilder(
       listenable: service,
@@ -73,14 +77,14 @@ class _HiddenAssignmentsPageState extends State<HiddenAssignmentsPage> {
             hiddenKeys.isNotEmpty && _selected.length == hiddenKeys.length;
 
         return Scaffold(
-          extendBodyBehindAppBar: true,
+          extendBodyBehindAppBar: !useLegacyIosChrome,
           appBar: BlurredAppBar(
-            automaticallyImplyLeading: !isIos(),
-            leadingWidth: isIos() ? 0 : null,
-            leading: isIos() ? const SizedBox.shrink() : null,
+            automaticallyImplyLeading: !useLiquidGlass,
+            leadingWidth: useLiquidGlass ? 0 : null,
+            leading: useLiquidGlass ? const SizedBox.shrink() : null,
             centerTitle: false,
-            titleSpacing: isIos() ? 8 : null,
-            title: isIos()
+            titleSpacing: useLiquidGlass ? 16 : null,
+            title: useLiquidGlass
                 ? _HiddenAssignmentsTopContainer(
                     selectionMode: _selectionMode,
                     selectedAll: selectedAll,
@@ -95,39 +99,79 @@ class _HiddenAssignmentsPageState extends State<HiddenAssignmentsPage> {
                         ? null
                         : () => _toggleSelectAll(hiddenKeys),
                   )
-                : const Text('已忽略的作业'),
-            actions: isIos()
+                : Text(
+                    _selectionMode ? '已选择 ${_selected.length} 个' : '已忽略的作业',
+                  ),
+            actions: useLiquidGlass
                 ? null
                 : [
                     if (_selectionMode)
-                      _NavigationTextAction(
-                        alignment: Alignment.centerRight,
-                        padding: EdgeInsets.zero,
-                        label: selectedAll ? 'Deselect All' : 'Select All',
-                        width: selectedAll ? 124 : 108,
-                        onPressed: hiddenKeys.isEmpty
-                            ? null
-                            : () => _toggleSelectAll(hiddenKeys),
-                        usesIosLiquidGlass: false,
-                      ),
+                      if (isIos())
+                        IosGlassActionButton(
+                          icon: selectedAll ? Icons.deselect : Icons.select_all,
+                          sfSymbol: selectedAll
+                              ? 'checklist.unchecked'
+                              : 'checklist.checked',
+                          width: 44,
+                          height: 44,
+                          enabled: hiddenKeys.isNotEmpty,
+                          onPressed: hiddenKeys.isEmpty
+                              ? () {}
+                              : () => _toggleSelectAll(hiddenKeys),
+                        )
+                      else
+                        IconButton(
+                          tooltip: selectedAll ? '全不选' : '全选',
+                          icon: Icon(
+                            selectedAll ? Icons.deselect : Icons.select_all,
+                          ),
+                          onPressed: hiddenKeys.isEmpty
+                              ? null
+                              : () => _toggleSelectAll(hiddenKeys),
+                        ),
                     if (_selectionMode)
-                      IconButton(
-                        tooltip: '恢复',
-                        onPressed: _selected.isNotEmpty
-                            ? _restoreSelected
-                            : null,
-                        icon: const Icon(Icons.restore),
-                      ),
+                      if (isIos())
+                        IosGlassActionButton(
+                          icon: Icons.restore,
+                          sfSymbol: 'arrow.uturn.backward',
+                          width: 44,
+                          height: 44,
+                          enabled: _selected.isNotEmpty,
+                          onPressed:
+                              _selected.isEmpty ? () {} : _restoreSelected,
+                        )
+                      else
+                        IconButton(
+                          tooltip: '恢复',
+                          onPressed:
+                              _selected.isNotEmpty ? _restoreSelected : null,
+                          icon: const Icon(Icons.restore),
+                        ),
                     if (hiddenKeys.isNotEmpty)
-                      _NavigationTextAction(
-                        alignment: Alignment.centerRight,
-                        padding: const EdgeInsetsDirectional.only(end: 12),
-                        label: _selectionMode ? 'Done' : 'Select',
-                        onPressed: _selectionMode
-                            ? _exitSelectionMode
-                            : _enterSelectionMode,
-                        usesIosLiquidGlass: false,
-                      ),
+                      if (isIos())
+                        IosGlassActionButton(
+                          icon: _selectionMode
+                              ? Icons.check
+                              : Icons.checklist_outlined,
+                          sfSymbol: _selectionMode ? 'checkmark' : 'checklist',
+                          width: 44,
+                          height: 44,
+                          onPressed: _selectionMode
+                              ? _exitSelectionMode
+                              : _enterSelectionMode,
+                        )
+                      else
+                        IconButton(
+                          tooltip: _selectionMode ? '完成' : '选择',
+                          icon: Icon(
+                            _selectionMode
+                                ? Icons.check
+                                : Icons.checklist_outlined,
+                          ),
+                          onPressed: _selectionMode
+                              ? _exitSelectionMode
+                              : _enterSelectionMode,
+                        ),
                   ],
           ),
           body: hiddenKeys.isEmpty
@@ -238,8 +282,8 @@ class _HiddenAssignmentsTopContainer extends StatelessWidget {
               child: IosGlassActionButton(
                 label: selectedAll ? 'Deselect All' : 'Select All',
                 sfSymbol: 'none',
-                width: selectedAll ? 132 : 120,
                 enabled: onToggleSelectAll != null,
+                variant: IosGlassActionButtonVariant.glass,
                 onPressed: onToggleSelectAll ?? () {},
               ),
             )
@@ -247,7 +291,7 @@ class _HiddenAssignmentsTopContainer extends StatelessWidget {
             IosGlassActionButton(
               label: 'Deadlines',
               sfSymbol: 'chevron.left',
-              width: 120,
+              variant: IosGlassActionButtonVariant.glass,
               onPressed: onBack,
             ),
           const Spacer(),
@@ -286,64 +330,12 @@ class _HiddenAssignmentsTopContainer extends StatelessWidget {
           IosGlassActionButton(
             label: selectionMode ? 'Done' : 'Select',
             sfSymbol: 'none',
-            width: 80,
             enabled: hasItems,
+            variant: IosGlassActionButtonVariant.glass,
             onPressed: onToggleSelectionMode,
           ),
         ],
       ),
-    );
-  }
-}
-
-class _NavigationTextAction extends StatelessWidget {
-  const _NavigationTextAction({
-    required this.alignment,
-    required this.padding,
-    required this.label,
-    required this.onPressed,
-    required this.usesIosLiquidGlass,
-    this.width,
-  });
-
-  final Alignment alignment;
-  final EdgeInsetsGeometry padding;
-  final String label;
-  final VoidCallback? onPressed;
-  final bool usesIosLiquidGlass;
-  final double? width;
-
-  @override
-  Widget build(BuildContext context) {
-    final button = usesIosLiquidGlass
-        ? const SizedBox.shrink()
-        : AnimatedSize(
-            duration: const Duration(milliseconds: 240),
-            curve: Curves.easeInOutCubic,
-            alignment: alignment,
-            child: SizedBox(
-              width: width,
-              child: TextButton(
-                onPressed: onPressed,
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 4,
-                    vertical: 8,
-                  ),
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                child: Text(
-                  label,
-                  overflow: TextOverflow.fade,
-                  softWrap: false,
-                ),
-              ),
-            ),
-          );
-
-    return Align(
-      alignment: alignment,
-      child: Padding(padding: padding, child: button),
     );
   }
 }
