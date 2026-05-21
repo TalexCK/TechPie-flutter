@@ -4,13 +4,13 @@ import '../models/feature.dart';
 
 class AppCard extends StatelessWidget {
   final List<Feature> features;
-  final int columns;
+  final int rows;
   final ValueChanged<Feature>? onFeatureTap;
 
   const AppCard({
     super.key,
     required this.features,
-    this.columns = 2,
+    this.rows = 2,
     this.onFeatureTap,
   });
 
@@ -25,9 +25,9 @@ class AppCard extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         const itemWidth = 72.0;
-        final rawPerRow = ( ( constraints.maxWidth - 16 )/ itemWidth).floor();
+        final rawPerRow = (( constraints.maxWidth - 16 )/ itemWidth).floor();
         final effectivePerRow = rawPerRow < 1 ? 1 : rawPerRow;
-        final visibleFeatures = features.take(effectivePerRow * columns - 1);
+        final visibleFeatures = features.take(effectivePerRow * rows - 1);
         return Material(
           color: Colors.transparent,
           child: Padding(
@@ -37,7 +37,7 @@ class AppCard extends StatelessWidget {
               children: [
                 for (final feature in [
                   ...visibleFeatures,
-                  if (features.length > effectivePerRow * columns - 1) moreFeature
+                  if (features.length > effectivePerRow * rows - 1) moreFeature
                 ])
                   SizedBox(
                     width: itemWidth,
