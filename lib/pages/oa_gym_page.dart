@@ -43,7 +43,24 @@ class _OaGymPageState extends State<OaGymPage>
     return Scaffold(
       extendBodyBehindAppBar: !useIosChrome && !useLegacyIosChrome,
       appBar: useIosChrome
-          ? const IosNativeNavigationBar(title: '场馆预约', largeTitleMode: true)
+          ? IosNativeNavigationBar(
+              title: '场馆预约',
+              leadingItems: [
+                IosNativeNavigationBarItem(
+                  id: 'back',
+                  title: 'Home',
+                  sfSymbol: 'chevron.left',
+                  accessibilityLabel: '返回 Home',
+                  placementGroup: 'leading-main',
+                )
+              ],
+              onItemPressed: (id) {
+                switch (id) {
+                  case 'back':
+                    Navigator.maybePop(context);
+                }
+              },
+            )
           : const BlurredAppBar(title: Text('场馆预约')),
       body: auth.isLoggedIn
           ? Column(
