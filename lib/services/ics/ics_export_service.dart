@@ -17,6 +17,32 @@ class StructuredLocation {
   });
 }
 
+class _CalendarEventData {
+  final EamsCourse course;
+  final int week;
+  final int day;
+  final int startPeriodIndex;
+  final int endPeriodIndex;
+  final DateTime classDate;
+  final DateTime startDateTime;
+  final DateTime endDateTime;
+  final String location;
+  final StructuredLocation? structuredLocation;
+
+  const _CalendarEventData({
+    required this.course,
+    required this.week,
+    required this.day,
+    required this.startPeriodIndex,
+    required this.endPeriodIndex,
+    required this.classDate,
+    required this.startDateTime,
+    required this.endDateTime,
+    required this.location,
+    required this.structuredLocation,
+  });
+}
+
 class IcsExportService {
   static const List<StructuredLocation> _structuredLocations = [
     StructuredLocation(
@@ -70,13 +96,6 @@ class IcsExportService {
     required DateTime termBegin,
     String calendarName = '课表',
   }) {
-    final mondayOfWeekOne = termBegin.subtract(
-      Duration(days: termBegin.weekday - 1),
-    );
-    final periodsByIndex = {
-      for (final period in table.periods) period.index: period.toPeriod(),
-    };
-
     final buffer = StringBuffer()
       ..writeln('BEGIN:VCALENDAR')
       ..writeln('VERSION:2.0')
@@ -86,56 +105,37 @@ class IcsExportService {
       ..writeln('X-WR-CALNAME:${_escapeText(calendarName)}')
       ..writeln('X-WR-TIMEZONE:Asia/Shanghai');
 
-    for (final course in table.courses) {
-      for (int week = 1; week < course.weeks.length; week++) {
-        if (course.weeks[week] != '1') continue;
-
-        final monday = mondayOfWeekOne.add(Duration(days: (week - 1) * 7));
-        for (final entry in course.times.entries) {
-          final day = entry.key;
-          final periods = [...entry.value]..sort();
-          if (periods.isEmpty) continue;
-
-          final startPeriod = periodsByIndex[periods.first];
-          final endPeriod = periodsByIndex[periods.last];
-          if (startPeriod == null || endPeriod == null) continue;
-
-          final classDate = monday.add(Duration(days: day - 1));
-          final classroom = course.classroom.trim();
-          final location = classroom.isEmpty ? '上海科技大学' : '$classroom 上海科技大学';
-          final structuredLocation = _findStructuredLocation(classroom);
-
-          buffer.writeln('BEGIN:VEVENT');
-          buffer.writeln(
-            'UID:${_buildUid(course, week, day, periods.first, periods.last)}',
-          );
-          buffer.writeln(
-            'DTSTAMP:${_formatUtcTimestamp(DateTime.now().toUtc())}',
-          );
-          buffer.writeln(
-            'DTSTART;TZID=Asia/Shanghai:${_formatLocalDateTime(classDate, startPeriod.startTime)}',
-          );
-          buffer.writeln(
-            'DTEND;TZID=Asia/Shanghai:${_formatLocalDateTime(classDate, endPeriod.endTime)}',
-          );
-          buffer.writeln('SUMMARY:${_escapeText(course.name)}');
-          buffer.writeln('LOCATION-TYPE:SCHOOL');
-          buffer.writeln('LOCATION:${_escapeText(location)}');
-          if (structuredLocation != null) {
-            buffer.writeln(
-              'GEO:${structuredLocation.latitude};${structuredLocation.longitude}',
-            );
-            buffer.writeln(
-              'X-APPLE-STRUCTURED-LOCATION;VALUE=URI;X-ADDRESS="${_escapeAppleText(_structuredLocationAddress)}";X-APPLE-RADIUS=200;X-TITLE="${_escapeAppleText(structuredLocation.title)}":geo:${structuredLocation.latitude},${structuredLocation.longitude}',
-            );
-          }
-          if (course.teachers.trim().isNotEmpty) {
-            buffer.writeln('DESCRIPTION:${_escapeText(course.teachers)}');
-          }
-          buffer.writeln('SEQUENCE:0');
-          buffer.writeln('END:VEVENT');
-        }
+    for (final event in _expandCalendarEvents(table, termBegin)) {
+      buffer.writeln('BEGIN:VEVENT');
+      buffer.writeln(
+        'UID:${_buildUid(event.course, event.week, event.day, event.startPeriodIndex, event.endPeriodIndex)}',
+      );
+      buffer.writeln(
+        'DTSTAMP:${_formatUtcTimestamp(DateTime.now().toUtc())}',
+      );
+      buffer.writeln(
+        'DTSTART;TZID=Asia/Shanghai:${_formatDateTimeForIcs(event.startDateTime)}',
+      );
+      buffer.writeln(
+        'DTEND;TZID=Asia/Shanghai:${_formatDateTimeForIcs(event.endDateTime)}',
+      );
+      buffer.writeln('SUMMARY:${_escapeText(event.course.name)}');
+      buffer.writeln('LOCATION-TYPE:SCHOOL');
+      buffer.writeln('LOCATION:${_escapeText(event.location)}');
+      final structuredLocation = event.structuredLocation;
+      if (structuredLocation != null) {
+        buffer.writeln(
+          'GEO:${structuredLocation.latitude};${structuredLocation.longitude}',
+        );
+        buffer.writeln(
+          'X-APPLE-STRUCTURED-LOCATION;VALUE=URI;X-ADDRESS="${_escapeAppleText(_structuredLocationAddress)}";X-APPLE-RADIUS=200;X-TITLE="${_escapeAppleText(structuredLocation.title)}":geo:${structuredLocation.latitude},${structuredLocation.longitude}',
+        );
       }
+      if (event.course.teachers.trim().isNotEmpty) {
+        buffer.writeln('DESCRIPTION:${_escapeText(event.course.teachers)}');
+      }
+      buffer.writeln('SEQUENCE:0');
+      buffer.writeln('END:VEVENT');
     }
 
     buffer.writeln('END:VCALENDAR');
@@ -188,16 +188,61 @@ class IcsExportService {
     return '${Uri.encodeComponent(seed)}@techpie';
   }
 
-  String _formatLocalDateTime(DateTime date, String hhmm) {
-    final parts = hhmm.split(':');
-    final hour = parts.isNotEmpty ? int.tryParse(parts[0]) ?? 0 : 0;
-    final minute = parts.length > 1 ? int.tryParse(parts[1]) ?? 0 : 0;
-    return '${date.year.toString().padLeft(4, '0')}'
-        '${date.month.toString().padLeft(2, '0')}'
-        '${date.day.toString().padLeft(2, '0')}'
+  Iterable<_CalendarEventData> _expandCalendarEvents(
+    CourseTable table,
+    DateTime termBegin,
+  ) sync* {
+    final mondayOfWeekOne = termBegin.subtract(
+      Duration(days: termBegin.weekday - 1),
+    );
+    final periodsByIndex = {
+      for (final period in table.periods) period.index: period.toPeriod(),
+    };
+
+    for (final course in table.courses) {
+      for (int week = 1; week < course.weeks.length; week++) {
+        if (course.weeks[week] != '1') continue;
+
+        final monday = mondayOfWeekOne.add(Duration(days: (week - 1) * 7));
+        for (final entry in course.times.entries) {
+          final periods = [...entry.value]..sort();
+          if (periods.isEmpty) continue;
+
+          final startPeriodIndex = periods.first;
+          final endPeriodIndex = periods.last;
+          final startPeriod = periodsByIndex[startPeriodIndex];
+          final endPeriod = periodsByIndex[endPeriodIndex];
+          if (startPeriod == null || endPeriod == null) continue;
+
+          final classDate = monday.add(Duration(days: entry.key - 1));
+          final classroom = course.classroom.trim();
+          final location = classroom.isEmpty ? '上海科技大学' : '$classroom 上海科技大学';
+          yield _CalendarEventData(
+            course: course,
+            week: week,
+            day: entry.key,
+            startPeriodIndex: startPeriodIndex,
+            endPeriodIndex: endPeriodIndex,
+            classDate: classDate,
+            startDateTime:
+                _combineDateAndTime(classDate, startPeriod.startTime),
+            endDateTime: _combineDateAndTime(classDate, endPeriod.endTime),
+            location: location,
+            structuredLocation: _findStructuredLocation(classroom),
+          );
+        }
+      }
+    }
+  }
+
+  String _formatDateTimeForIcs(DateTime dateTime) {
+    return '${dateTime.year.toString().padLeft(4, '0')}'
+        '${dateTime.month.toString().padLeft(2, '0')}'
+        '${dateTime.day.toString().padLeft(2, '0')}'
         'T'
-        '${hour.toString().padLeft(2, '0')}'
-        '${minute.toString().padLeft(2, '0')}00';
+        '${dateTime.hour.toString().padLeft(2, '0')}'
+        '${dateTime.minute.toString().padLeft(2, '0')}'
+        '${dateTime.second.toString().padLeft(2, '0')}';
   }
 
   String _formatUtcTimestamp(DateTime date) {
@@ -244,58 +289,25 @@ List<Map<String, Object?>> _buildCalendarEventPayloadsInBackground(
     (payload['table'] as Map<Object?, Object?>).cast<String, dynamic>(),
   );
   final termBegin = DateTime.parse(payload['termBegin'] as String);
-
-  final mondayOfWeekOne = termBegin.subtract(
-    Duration(days: termBegin.weekday - 1),
-  );
-  final periodsByIndex = {
-    for (final period in table.periods) period.index: period.toPeriod(),
-  };
   final service = IcsExportService();
-  final events = <Map<String, Object?>>[];
-
-  for (final course in table.courses) {
-    for (int week = 1; week < course.weeks.length; week++) {
-      if (course.weeks[week] != '1') continue;
-
-      final monday = mondayOfWeekOne.add(Duration(days: (week - 1) * 7));
-      for (final entry in course.times.entries) {
-        final day = entry.key;
-        final periods = [...entry.value]..sort();
-        if (periods.isEmpty) continue;
-
-        final startPeriod = periodsByIndex[periods.first];
-        final endPeriod = periodsByIndex[periods.last];
-        if (startPeriod == null || endPeriod == null) continue;
-
-        final classDate = monday.add(Duration(days: day - 1));
-        final startDate = _combineDateAndTime(classDate, startPeriod.startTime);
-        final endDate = _combineDateAndTime(classDate, endPeriod.endTime);
-        final classroom = course.classroom.trim();
-        final location = classroom.isEmpty ? '上海科技大学' : '$classroom 上海科技大学';
-        final structuredLocation = service._findStructuredLocation(classroom);
-        final event = <String, Object?>{
-          'title': course.name,
-          'location': location,
-          'notes': course.teachers.trim(),
-          'startMillis': startDate.millisecondsSinceEpoch,
-          'endMillis': endDate.millisecondsSinceEpoch,
-        };
-        // 理论上可以加入经纬度，但是 Apple 用的坐标标准不太一样，暂且不加
-        if (structuredLocation != null) {
-          event.addAll({
-            'structuredLocationTitle': location,
-            'structuredLocationAddress':
-                '${structuredLocation.title} ${IcsExportService._structuredLocationAddress}',
-          });
-        }
-
-        events.add(event);
-      }
+  return service._expandCalendarEvents(table, termBegin).map((event) {
+    final payload = <String, Object?>{
+      'title': event.course.name,
+      'location': event.location,
+      'notes': event.course.teachers.trim(),
+      'startMillis': event.startDateTime.millisecondsSinceEpoch,
+      'endMillis': event.endDateTime.millisecondsSinceEpoch,
+    };
+    final structuredLocation = event.structuredLocation;
+    if (structuredLocation != null) {
+      payload.addAll({
+        'structuredLocationTitle': event.location,
+        'structuredLocationAddress':
+            '${structuredLocation.title} ${IcsExportService._structuredLocationAddress}',
+      });
     }
-  }
-
-  return events;
+    return payload;
+  }).toList(growable: false);
 }
 
 DateTime _combineDateAndTime(DateTime date, String hhmm) {

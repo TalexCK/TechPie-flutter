@@ -335,7 +335,8 @@ class _SchedulePageState extends State<SchedulePage> {
     return 'course_table_$safe.ics';
   }
 
-  String get _defaultCalendarName => _semesterLabel.isEmpty ? '课程表' : _semesterLabel;
+  String get _defaultCalendarName =>
+      _semesterLabel.isEmpty ? '课程表' : _semesterLabel;
 
   void _startExportCalendar() {
     if (_exportingCalendar) return;
@@ -386,9 +387,8 @@ class _SchedulePageState extends State<SchedulePage> {
           if (!mounted) return;
           showAdaptiveFeedback(
             context: context,
-            message: imported > 0
-                ? '已导入 $imported 个日程到“$calendarName”'
-                : '没有可导入的日程',
+            message:
+                imported > 0 ? '已导入 $imported 个日程到“$calendarName”' : '没有可导入的日程',
             style: imported > 0
                 ? AdaptiveFeedbackStyle.success
                 : AdaptiveFeedbackStyle.info,
@@ -447,6 +447,7 @@ class _SchedulePageState extends State<SchedulePage> {
         } catch (_) {
           fallbackFile = saved;
         }
+        if (!mounted) return;
 
         showAdaptiveFeedback(
           context: context,
