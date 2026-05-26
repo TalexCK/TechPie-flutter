@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import '../../models/course_table.dart';
 import 'ics_file_saver.dart';
 
@@ -146,13 +148,23 @@ class IcsExportService {
     required String fileName,
     required IcsSaveLocation location,
     String calendarName = 'Course Table',
-  }) {
-    final content = buildCalendar(
-      table: table,
-      termBegin: termBegin,
-      calendarName: calendarName,
-    );
+  }) async {
+    final content = await compute(_buildCalendarInBackground, {
+      'table': table.toJson(),
+      'termBegin': termBegin.toIso8601String(),
+      'calendarName': calendarName,
+    });
     return saveIcsFile(fileName, content, location: location);
+  }
+
+  Future<List<Map<String, Object?>>> buildCalendarEventPayloads({
+    required CourseTable table,
+    required DateTime termBegin,
+  }) {
+    return compute(_buildCalendarEventPayloadsInBackground, {
+      'table': table.toJson(),
+      'termBegin': termBegin.toIso8601String(),
+    });
   }
 
   StructuredLocation? _findStructuredLocation(String classroom) {
@@ -209,4 +221,86 @@ class IcsExportService {
   String _escapeAppleText(String value) {
     return value.replaceAll(r'\', r'\\').replaceAll('"', r'\"');
   }
+}
+
+String _buildCalendarInBackground(Map<String, Object?> payload) {
+  final table = CourseTable.fromJson(
+    (payload['table'] as Map<Object?, Object?>).cast<String, dynamic>(),
+  );
+  final termBegin = DateTime.parse(payload['termBegin'] as String);
+  final calendarName = payload['calendarName'] as String? ?? '课表';
+
+  return IcsExportService().buildCalendar(
+    table: table,
+    termBegin: termBegin,
+    calendarName: calendarName,
+  );
+}
+
+List<Map<String, Object?>> _buildCalendarEventPayloadsInBackground(
+  Map<String, Object?> payload,
+) {
+  final table = CourseTable.fromJson(
+    (payload['table'] as Map<Object?, Object?>).cast<String, dynamic>(),
+  );
+  final termBegin = DateTime.parse(payload['termBegin'] as String);
+
+  final mondayOfWeekOne = termBegin.subtract(
+    Duration(days: termBegin.weekday - 1),
+  );
+  final periodsByIndex = {
+    for (final period in table.periods) period.index: period.toPeriod(),
+  };
+  final service = IcsExportService();
+  final events = <Map<String, Object?>>[];
+
+  for (final course in table.courses) {
+    for (int week = 1; week < course.weeks.length; week++) {
+      if (course.weeks[week] != '1') continue;
+
+      final monday = mondayOfWeekOne.add(Duration(days: (week - 1) * 7));
+      for (final entry in course.times.entries) {
+        final day = entry.key;
+        final periods = [...entry.value]..sort();
+        if (periods.isEmpty) continue;
+
+        final startPeriod = periodsByIndex[periods.first];
+        final endPeriod = periodsByIndex[periods.last];
+        if (startPeriod == null || endPeriod == null) continue;
+
+        final classDate = monday.add(Duration(days: day - 1));
+        final startDate = _combineDateAndTime(classDate, startPeriod.startTime);
+        final endDate = _combineDateAndTime(classDate, endPeriod.endTime);
+        final classroom = course.classroom.trim();
+        final location = classroom.isEmpty ? '上海科技大学' : '$classroom 上海科技大学';
+        final structuredLocation = service._findStructuredLocation(classroom);
+        final event = <String, Object?>{
+          'title': course.name,
+          'location': location,
+          'notes': course.teachers.trim(),
+          'startMillis': startDate.millisecondsSinceEpoch,
+          'endMillis': endDate.millisecondsSinceEpoch,
+        };
+        // 理论上可以加入经纬度，但是 Apple 用的坐标标准不太一样，暂且不加
+        if (structuredLocation != null) {
+          event.addAll({
+            'structuredLocationTitle': location,
+            'structuredLocationAddress':
+                '${structuredLocation.title} ${IcsExportService._structuredLocationAddress}',
+          });
+        }
+
+        events.add(event);
+      }
+    }
+  }
+
+  return events;
+}
+
+DateTime _combineDateAndTime(DateTime date, String hhmm) {
+  final parts = hhmm.split(':');
+  final hour = parts.isNotEmpty ? int.tryParse(parts[0]) ?? 0 : 0;
+  final minute = parts.length > 1 ? int.tryParse(parts[1]) ?? 0 : 0;
+  return DateTime(date.year, date.month, date.day, hour, minute);
 }

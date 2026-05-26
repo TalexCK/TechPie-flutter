@@ -1,10 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:open_filex/open_filex.dart';
 
 import '../models/course.dart';
 import '../models/course_table.dart';
 import '../services/ics/ics_export_service.dart';
 import '../services/ics/ics_file_saver.dart';
+import '../services/ios/ios_file_presenter.dart';
 import '../services/schedule_service.dart';
 import '../services/service_provider.dart';
 import '../widgets/adaptive_feedback.dart';
@@ -25,6 +30,7 @@ class SchedulePage extends StatefulWidget {
 
 class _SchedulePageState extends State<SchedulePage> {
   final IcsExportService _icsExport = IcsExportService();
+  final TextEditingController _calendarNameController = TextEditingController();
   late ScheduleService _schedule;
   List<Course> _courses = [];
   List<Period> _periods = defaultPeriods.toList();
@@ -57,6 +63,7 @@ class _SchedulePageState extends State<SchedulePage> {
 
   @override
   void dispose() {
+    _calendarNameController.dispose();
     _weekPageController.dispose();
     _schedule.removeListener(_onScheduleChanged);
     super.dispose();
@@ -74,6 +81,13 @@ class _SchedulePageState extends State<SchedulePage> {
     final auth = ServiceProvider.of(context).authService;
     if (auth.isLoggedIn) {
       await _schedule.fetchAll();
+    }
+  }
+
+  Future<void> _dismissKeyboard() async {
+    FocusManager.instance.primaryFocus?.unfocus();
+    if (isIos()) {
+      await SystemChannels.textInput.invokeMethod<void>('TextInput.hide');
     }
   }
 
@@ -315,86 +329,146 @@ class _SchedulePageState extends State<SchedulePage> {
     return '';
   }
 
-  bool get _canExportCalendar =>
-      _schedule.courseTable != null && _schedule.termBegin != null;
-
   String get _icsFileName {
     final semesterId = _schedule.selectedSemesterId ?? 'schedule';
     final safe = semesterId.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
     return 'course_table_$safe.ics';
   }
-  Future<void> _saveCalendarFile() async {
-    await _runCalendarExport(
-      location: IcsSaveLocation.downloads,
-      openAfterSave: false,
+
+  String get _defaultCalendarName => _semesterLabel.isEmpty ? '课程表' : _semesterLabel;
+
+  void _startExportCalendar() {
+    if (_exportingCalendar) return;
+    unawaited(_exportCalendar());
+  }
+
+  Future<SavedIcsFile> _saveCalendarFile(
+    IcsSaveLocation location, {
+    required String calendarName,
+  }) {
+    final table = _schedule.courseTable!;
+    final termBegin = _schedule.termBegin!;
+    return _icsExport.saveCalendar(
+      table: table,
+      termBegin: termBegin,
+      fileName: _icsFileName,
+      location: location,
+      calendarName: calendarName,
     );
   }
 
   Future<void> _exportCalendar() async {
-    await _runCalendarExport(
-      location: IcsSaveLocation.temporary,
-      openAfterSave: true,
-    );
-  }
-
-  Future<void> _runCalendarExport({
-    required IcsSaveLocation location,
-    required bool openAfterSave,
-  }) async {
     final table = _schedule.courseTable;
     final termBegin = _schedule.termBegin;
     if (table == null || termBegin == null || _exportingCalendar) return;
 
+    final calendarName = isIos()
+        ? await _promptCalendarName(initialValue: _defaultCalendarName)
+        : _defaultCalendarName;
+    if (calendarName == null || calendarName.trim().isEmpty) return;
+
     setState(() {
       _exportingCalendar = true;
     });
+    await WidgetsBinding.instance.endOfFrame;
 
     try {
-      final saved = await _icsExport.saveCalendar(
-        table: table,
-        termBegin: termBegin,
-        fileName: _icsFileName,
-        location: location,
-        calendarName: _semesterLabel.isEmpty ? 'Course Table' : _semesterLabel,
-      );
-
-      if (openAfterSave && saved.launchUri != null) {
-        final launched = await launchUrl(
-          saved.launchUri!,
-          mode: LaunchMode.externalApplication,
-        );
-        if (!launched && mounted) {
+      if (isIos()) {
+        try {
+          final events = await _icsExport.buildCalendarEventPayloads(
+            table: table,
+            termBegin: termBegin,
+          );
+          final imported = await IosFilePresenter.importCalendarEvents(
+            events,
+            calendarName: calendarName,
+          );
+          if (!mounted) return;
           showAdaptiveFeedback(
             context: context,
-            message: saved.filePath != null
-                ? 'Exported to temp file: ${saved.filePath}'
-                : 'ICS file created. Open it manually.',
+            message: imported > 0
+                ? '已导入 $imported 个日程到“$calendarName”'
+                : '没有可导入的日程',
+            style: imported > 0
+                ? AdaptiveFeedbackStyle.success
+                : AdaptiveFeedbackStyle.info,
+          );
+          return;
+        } catch (_) {
+          final fallbackFile = await _saveCalendarFile(
+            IcsSaveLocation.downloads,
+            calendarName: calendarName,
+          );
+          if (!mounted) return;
+          showAdaptiveFeedback(
+            context: context,
+            message: fallbackFile.filePath != null
+                ? '导入失败，已导出到下载目录: ${fallbackFile.filePath}'
+                : '导入失败，ICS 文件已创建。',
             style: AdaptiveFeedbackStyle.info,
           );
           return;
         }
       }
 
+      final saved = await _saveCalendarFile(
+        IcsSaveLocation.temporary,
+        calendarName: calendarName,
+      );
+
+      bool launched = false;
+      if (saved.filePath != null) {
+        try {
+          final result = await OpenFilex.open(saved.filePath!);
+          launched = result.type == ResultType.done;
+        } catch (e) {
+          launched = false;
+        }
+      }
+
+      if (!launched && saved.launchUri != null) {
+        try {
+          launched = await launchUrl(
+            saved.launchUri!,
+            mode: LaunchMode.externalApplication,
+          );
+        } catch (e) {
+          launched = false;
+        }
+      }
+
+      if (!launched && mounted) {
+        SavedIcsFile fallbackFile = saved;
+        try {
+          fallbackFile = await _saveCalendarFile(
+            IcsSaveLocation.downloads,
+            calendarName: calendarName,
+          );
+        } catch (_) {
+          fallbackFile = saved;
+        }
+
+        showAdaptiveFeedback(
+          context: context,
+          message: fallbackFile.filePath != null
+              ? '已导出到下载目录: ${fallbackFile.filePath}'
+              : 'ICS 文件已创建。',
+          style: AdaptiveFeedbackStyle.info,
+        );
+        return;
+      }
+
       if (!mounted) return;
-      final message = openAfterSave
-          ? (saved.filePath != null
-                ? 'Temp file created and opened: ${saved.filePath}'
-                : 'ICS file created and opened.')
-          : (saved.filePath != null
-                ? 'Saved to Downloads: ${saved.filePath}'
-                : 'Download started: $_icsFileName');
       showAdaptiveFeedback(
         context: context,
-        message: message,
+        message: '课表导出操作成功',
         style: AdaptiveFeedbackStyle.success,
       );
     } catch (_) {
       if (!mounted) return;
       showAdaptiveFeedback(
         context: context,
-        message: openAfterSave
-            ? 'Failed to export a temp ICS file and open it.'
-            : 'Failed to save the ICS file to Downloads.',
+        message: '导出课表失败',
         style: AdaptiveFeedbackStyle.error,
       );
     } finally {
@@ -404,6 +478,52 @@ class _SchedulePageState extends State<SchedulePage> {
         });
       }
     }
+  }
+
+  Future<String?> _promptCalendarName({required String initialValue}) async {
+    _calendarNameController
+      ..text = initialValue
+      ..selection = TextSelection(
+        baseOffset: 0,
+        extentOffset: initialValue.length,
+      );
+
+    return showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        Future<void> closeDialog([String? value]) async {
+          await _dismissKeyboard();
+          if (!dialogContext.mounted) return;
+          Navigator.of(dialogContext).pop(value);
+        }
+
+        return AlertDialog(
+          title: const Text('请输入日历名称'),
+          content: TextField(
+            controller: _calendarNameController,
+            autofocus: true,
+            decoration: const InputDecoration(
+              labelText: '日历名',
+              hintText: '例如：2025-2026 春季学期',
+            ),
+            textInputAction: TextInputAction.done,
+            onSubmitted: (value) {
+              closeDialog(value.trim());
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => closeDialog(),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () => closeDialog(_calendarNameController.text.trim()),
+              child: const Text('导入'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -464,14 +584,18 @@ class _SchedulePageState extends State<SchedulePage> {
                       checked: _showGhostCourses,
                     ),
                     IosNativeNavigationBarMenuItem(
-                      value: 'exportCalendar',
-                      title: 'Export calendar',
-                      sfSymbol: 'square.and.arrow.up',
-                    ),
-                    IosNativeNavigationBarMenuItem(
-                      value: 'saveCalendar',
-                      title: 'Save file',
-                      sfSymbol: 'arrow.down.circle',
+                      value: '__export_section__',
+                      title: '',
+                      displayInline: true,
+                      children: [
+                        IosNativeNavigationBarMenuItem(
+                          value: 'exportCalendar',
+                          title: _exportingCalendar ? '正在导出…' : '导出课表',
+                          sfSymbol: _exportingCalendar
+                              ? 'arrow.triangle.2.circlepath'
+                              : 'square.and.arrow.up',
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -501,13 +625,6 @@ class _SchedulePageState extends State<SchedulePage> {
                         trailingIcon: Icons.unfold_more,
                       ),
                     ),
-                  const SizedBox(width: 8),
-                  _ExportCalendarMenu(
-                    enabled: _canExportCalendar && !_exportingCalendar,
-                    busy: _exportingCalendar,
-                    onExport: _exportCalendar,
-                    onSave: _saveCalendarFile,
-                  ),
                   if (isDesktopLayout(context) && !isViewingCurrentWeek) ...[
                     const SizedBox(width: 12),
                     TextButton.icon(
@@ -529,6 +646,17 @@ class _SchedulePageState extends State<SchedulePage> {
                   icon: const Icon(Icons.chevron_right),
                   tooltip: 'Next week',
                   onPressed: _nextWeek,
+                ),
+                IconButton(
+                  tooltip: _exportingCalendar ? '正在导出课表' : '导出课表',
+                  onPressed: _exportingCalendar ? null : _startExportCalendar,
+                  icon: _exportingCalendar
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.ios_share_rounded),
                 ),
                 if (isDesktopLayout(context))
                   IconButton(
@@ -737,9 +865,7 @@ class _SchedulePageState extends State<SchedulePage> {
           _filterCoursesForWeek();
         });
       case 'exportCalendar':
-        _exportCalendar();
-      case 'saveCalendar':
-        _saveCalendarFile();
+        _startExportCalendar();
     }
   }
 
@@ -807,6 +933,23 @@ class _SchedulePageState extends State<SchedulePage> {
                     ),
                     title: Text('显示非本周课程', style: theme.textTheme.bodyMedium),
                     onTap: () => toggle('ghost'),
+                  ),
+                  const Divider(height: 1),
+                  DesktopMenuRow(
+                    leading: _exportingCalendar
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.ios_share_rounded, size: 20),
+                    title: Text('导出课表', style: theme.textTheme.bodyMedium),
+                    onTap: _exportingCalendar
+                        ? null
+                        : () {
+                            close();
+                            _startExportCalendar();
+                          },
                   ),
                 ],
               );
@@ -915,158 +1058,6 @@ class _DesktopWeekTitleMenu extends StatelessWidget {
                   ? Icons.expand_less_rounded
                   : Icons.expand_more_rounded,
             ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _ExportCalendarMenu extends StatefulWidget {
-  final bool enabled;
-  final bool busy;
-  final VoidCallback onExport;
-  final VoidCallback onSave;
-
-  const _ExportCalendarMenu({
-    required this.enabled,
-    required this.busy,
-    required this.onExport,
-    required this.onSave,
-  });
-
-  @override
-  State<_ExportCalendarMenu> createState() => _ExportCalendarMenuState();
-}
-
-class _ExportCalendarMenuState extends State<_ExportCalendarMenu> {
-  final GlobalKey _anchorKey = GlobalKey();
-
-  @override
-  Widget build(BuildContext context) {
-    if (isIos()) {
-      return IosGlassDropdownMenu(
-        icon: widget.busy ? Icons.hourglass_top : Icons.ios_share_rounded,
-        sfSymbol: widget.busy ? 'hourglass' : 'square.and.arrow.up',
-        tooltip: 'Export calendar',
-        width: 40,
-        height: 40,
-        items: const [
-          IosGlassDropdownMenuItem(
-            value: 'export',
-            label: 'Export calendar',
-          ),
-          IosGlassDropdownMenuItem(
-            value: 'save',
-            label: 'Save file',
-          ),
-        ],
-        onSelected: (value) {
-          if (value == 'export') {
-            widget.onExport();
-          } else if (value == 'save') {
-            widget.onSave();
-          }
-        },
-      );
-    }
-
-    final theme = Theme.of(context);
-    final icon = widget.busy ? Icons.hourglass_top : Icons.ios_share_rounded;
-
-    if (isDesktopLayout(context)) {
-      return SizedBox(
-        width: 40,
-        height: 40,
-        child: IconButton(
-          key: _anchorKey,
-          tooltip: 'Export calendar',
-          onPressed: widget.enabled ? _showDesktopMenu : null,
-          icon: Icon(icon, size: 20),
-        ),
-      );
-    }
-
-    return PopupMenuButton<String>(
-      enabled: widget.enabled,
-      tooltip: 'Export calendar',
-      icon: Icon(
-        icon,
-        size: 20,
-        color: widget.enabled
-            ? theme.colorScheme.onSurfaceVariant
-            : theme.colorScheme.onSurfaceVariant.withAlpha(120),
-      ),
-      onSelected: (value) {
-        if (value == 'export') {
-          widget.onExport();
-        } else if (value == 'save') {
-          widget.onSave();
-        }
-      },
-      itemBuilder: (context) => const [
-        PopupMenuItem<String>(
-          value: 'export',
-          child: Row(
-            children: [
-              Icon(Icons.event_available, size: 18),
-              SizedBox(width: 10),
-              Text('Export calendar'),
-            ],
-          ),
-        ),
-        PopupMenuItem<String>(
-          value: 'save',
-          child: Row(
-            children: [
-              Icon(Icons.download_rounded, size: 18),
-              SizedBox(width: 10),
-              Text('Save file'),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  void _showDesktopMenu() {
-    final anchorContext = _anchorKey.currentContext;
-    if (anchorContext == null) return;
-
-    showDesktopPopover(
-      anchorContext: anchorContext,
-      width: 220,
-      placement: DesktopPopoverPlacement.belowEnd,
-      offset: const Offset(0, 8),
-      builder: (context, close) {
-        return DesktopPopoverSurface(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DesktopMenuRow(
-                leading: const Icon(Icons.event_available, size: 20),
-                title: Text(
-                  'Export calendar',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-                onTap: () {
-                  close();
-                  widget.onExport();
-                },
-              ),
-              DesktopMenuRow(
-                leading: const Icon(Icons.download_rounded, size: 20),
-                title: Text(
-                  'Save file',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-                onTap: () {
-                  close();
-                  widget.onSave();
-                },
-              ),
-            ],
           ),
         );
       },
