@@ -19,6 +19,7 @@ import '../widgets/app_card.dart';
 import '../widgets/ios_liquid/ios_native_navigation_bar.dart';
 import '../utils/platform.dart';
 import 'generic_webview_page.dart';
+import 'login_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -424,6 +425,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         icon: Icons.login_rounded,
         title: '登录以查看今日课程',
         subtitle: '连接你的教务系统账号',
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const LoginPage()),
+          );
+        },
       );
     } else if (_todayCourses.isEmpty) {
       content = _buildEmptyContent(
@@ -666,14 +672,16 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     required IconData icon,
     required String title,
     required String subtitle,
+    VoidCallback? onTap,
   }) {
-    return Padding(
-      key: key,
-      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 24),
-      child: Column(
-        children: [
-          Container(
-            width: 64,
+    final inner = SizedBox(
+      width: double.infinity,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 24),
+        child: Column(
+          children: [
+            Container(
+              width: 64,
             height: 64,
             decoration: BoxDecoration(
               color: theme.colorScheme.surfaceContainerHighest,
@@ -696,7 +704,17 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           ),
         ],
       ),
-    );
+    ));
+
+    if (onTap != null) {
+      return InkWell(
+        key: key,
+        onTap: onTap,
+        child: inner,
+      );
+    }
+    
+    return Container(key: key, child: inner);
   }
 
   Widget _buildCourseContent({required Key key, required ThemeData theme}) {
