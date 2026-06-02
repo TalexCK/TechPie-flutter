@@ -376,9 +376,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           Navigator.of(context).push(
             MaterialPageRoute(
               builder: (_) => GenericWebViewPage(
-                title: feature.description,
-                url: feature.url!,
-                cookies: cookies),
+                  title: feature.description,
+                  url: feature.url!,
+                  cookies: cookies),
             ),
           );
         }
@@ -425,10 +425,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         icon: Icons.login_rounded,
         title: '登录以查看今日课程',
         subtitle: '连接你的教务系统账号',
-        onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const LoginPage()),
-          );
+        onTap: () async {
+          await presentLoginPage(context);
+          if (!mounted) return;
+          setState(() {});
         },
       );
     } else if (_todayCourses.isEmpty) {
@@ -675,36 +675,36 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     VoidCallback? onTap,
   }) {
     final inner = SizedBox(
-      width: double.infinity,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 24),
-        child: Column(
-          children: [
-            Container(
-              width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerHighest,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              icon,
-              size: 32,
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
+        width: double.infinity,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 24),
+          child: Column(
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceContainerHighest,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  icon,
+                  size: 32,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(title, style: theme.textTheme.titleMedium),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
-          Text(title, style: theme.textTheme.titleMedium),
-          const SizedBox(height: 4),
-          Text(
-            subtitle,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ],
-      ),
-    ));
+        ));
 
     if (onTap != null) {
       return InkWell(
@@ -713,7 +713,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         child: inner,
       );
     }
-    
+
     return Container(key: key, child: inner);
   }
 
