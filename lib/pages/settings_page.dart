@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:techpie/services/auth_service.dart';
@@ -28,7 +30,7 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   void initState() {
     super.initState();
-    _loadAppVersion();
+    unawaited(_loadAppVersion());
   }
 
   Future<void> _loadAppVersion() async {
@@ -110,24 +112,26 @@ class _SettingsPageState extends State<SettingsPage> {
                   '${tpAuth.boundPlatforms.length} bound · Gradescope / Hydro / Blackboard',
                 ),
                 trailing: const Icon(Icons.chevron_right),
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const ThirdPartyAccountsPage(),
+                onTap: () => unawaited(
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute<void>(
+                      builder: (_) => const ThirdPartyAccountsPage(),
+                    ),
                   ),
                 ),
               ),
               ListTile(
                 leading: const Icon(Icons.logout),
                 title: const Text('Logout'),
-                onTap: () => _confirmLogout(auth),
+                onTap: () => unawaited(_confirmLogout(auth)),
               ),
             ] else
               ListTile(
                 leading: const Icon(Icons.login),
                 title: const Text('Login'),
                 subtitle: const Text('Sign in to your campus account'),
-                onTap: () => presentLoginPage(context),
+                onTap: () => unawaited(presentLoginPage(context)),
               ),
             const Divider(),
 
@@ -151,7 +155,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       (item) => item.name == value,
                       orElse: () => AppThemeMode.system,
                     );
-                    themeService.setMode(mode);
+                    unawaited(themeService.setMode(mode));
                   },
                 ),
               )
@@ -185,7 +189,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       (item) => item.name == value,
                       orElse: () => AppColorScheme.system,
                     );
-                    themeService.setColorScheme(scheme);
+                    unawaited(themeService.setColorScheme(scheme));
                   },
                 ),
               )
@@ -203,10 +207,11 @@ class _SettingsPageState extends State<SettingsPage> {
             // General section
             _sectionHeader(theme, 'General'),
             ListTile(
-                leading: const Icon(Icons.notifications_outlined),
-                title: const Text('Notifications'),
-                subtitle: const Text('Manage notification preferences'),
-                onTap: () {}),
+              leading: const Icon(Icons.notifications_outlined),
+              title: const Text('Notifications'),
+              subtitle: const Text('Manage notification preferences'),
+              onTap: () {},
+            ),
             ListTile(
               leading: const Icon(Icons.info_outline),
               title: const Text('About'),
@@ -229,7 +234,7 @@ class _SettingsPageState extends State<SettingsPage> {
               value: logger.enabled,
               onChanged: (value) {
                 logger.enabled = value;
-                storage.setDebugMode(value);
+                unawaited(storage.setDebugMode(value));
               },
             ),
             _AdaptiveSwitchTile(
@@ -239,7 +244,7 @@ class _SettingsPageState extends State<SettingsPage> {
               subtitle: 'Connect to local development server',
               value: storage.useLocalhost,
               onChanged: (value) {
-                storage.setUseLocalhost(value);
+                unawaited(storage.setUseLocalhost(value));
                 setState(() {});
               },
             ),
@@ -248,9 +253,13 @@ class _SettingsPageState extends State<SettingsPage> {
                 leading: const Icon(Icons.list_alt),
                 title: const Text('View Logs'),
                 subtitle: Text('${logger.entries.length} entries'),
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const DebugLogPage()),
+                onTap: () => unawaited(
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute<void>(
+                      builder: (_) => const DebugLogPage(),
+                    ),
+                  ),
                 ),
               ),
           ],
@@ -275,7 +284,7 @@ class _SettingsPageState extends State<SettingsPage> {
     );
 
     if (ok == true) {
-      auth.logout();
+      await auth.logout();
     }
   }
 
@@ -321,7 +330,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       ],
                     ),
                     onTap: () {
-                      themeService.setMode(mode);
+                      unawaited(themeService.setMode(mode));
                       close();
                     },
                   ),
@@ -333,36 +342,38 @@ class _SettingsPageState extends State<SettingsPage> {
       return;
     }
 
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              child: Text(
-                'Choose theme',
-                style: Theme.of(context).textTheme.titleMedium,
+    unawaited(
+      showModalBottomSheet<void>(
+        context: context,
+        builder: (context) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: Text(
+                  'Choose theme',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
               ),
-            ),
-            for (final mode in AppThemeMode.values)
-              ListTile(
-                leading: Icon(mode.icon),
-                title: Text(mode.label),
-                trailing: themeService.mode == mode
-                    ? Icon(
-                        Icons.check,
-                        color: Theme.of(context).colorScheme.primary,
-                      )
-                    : null,
-                onTap: () {
-                  themeService.setMode(mode);
-                  Navigator.pop(context);
-                },
-              ),
-            const SizedBox(height: 8),
-          ],
+              for (final mode in AppThemeMode.values)
+                ListTile(
+                  leading: Icon(mode.icon),
+                  title: Text(mode.label),
+                  trailing: themeService.mode == mode
+                      ? Icon(
+                          Icons.check,
+                          color: Theme.of(context).colorScheme.primary,
+                        )
+                      : null,
+                  onTap: () {
+                    unawaited(themeService.setMode(mode));
+                    Navigator.pop(context);
+                  },
+                ),
+              const SizedBox(height: 8),
+            ],
+          ),
         ),
       ),
     );
@@ -418,7 +429,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       ],
                     ),
                     onTap: () {
-                      themeService.setColorScheme(scheme);
+                      unawaited(themeService.setColorScheme(scheme));
                       close();
                     },
                   ),
@@ -430,36 +441,38 @@ class _SettingsPageState extends State<SettingsPage> {
       return;
     }
 
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              child: Text(
-                'Choose color',
-                style: Theme.of(context).textTheme.titleMedium,
+    unawaited(
+      showModalBottomSheet<void>(
+        context: context,
+        builder: (context) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: Text(
+                  'Choose color',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
               ),
-            ),
-            for (final scheme in AppColorScheme.values)
-              ListTile(
-                leading: Icon(scheme.icon),
-                title: Text(scheme.label),
-                trailing: themeService.colorScheme == scheme
-                    ? Icon(
-                        Icons.check,
-                        color: Theme.of(context).colorScheme.primary,
-                      )
-                    : null,
-                onTap: () {
-                  themeService.setColorScheme(scheme);
-                  Navigator.pop(context);
-                },
-              ),
-            const SizedBox(height: 8),
-          ],
+              for (final scheme in AppColorScheme.values)
+                ListTile(
+                  leading: Icon(scheme.icon),
+                  title: Text(scheme.label),
+                  trailing: themeService.colorScheme == scheme
+                      ? Icon(
+                          Icons.check,
+                          color: Theme.of(context).colorScheme.primary,
+                        )
+                      : null,
+                  onTap: () {
+                    unawaited(themeService.setColorScheme(scheme));
+                    Navigator.pop(context);
+                  },
+                ),
+              const SizedBox(height: 8),
+            ],
+          ),
         ),
       ),
     );

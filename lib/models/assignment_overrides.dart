@@ -24,8 +24,7 @@ class AssignmentOverrides {
     return a.submitted;
   }
 
-  bool hasCompletionOverride(Assignment a) =>
-      completed.containsKey(keyFor(a));
+  bool hasCompletionOverride(Assignment a) => completed.containsKey(keyFor(a));
 
   Map<String, dynamic> toJson() => {
         'completed': completed,
@@ -37,9 +36,8 @@ class AssignmentOverrides {
           (k, v) => MapEntry(k as String, v as bool),
         ) ??
         <String, bool>{};
-    final h = ((json['hidden'] as List?) ?? const [])
-        .map((e) => e as String)
-        .toSet();
+    final h =
+        ((json['hidden'] as List?) ?? const []).map((e) => e as String).toSet();
     return AssignmentOverrides(completed: c, hidden: h);
   }
 }

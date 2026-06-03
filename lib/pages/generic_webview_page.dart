@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
@@ -24,17 +26,19 @@ class _GenericWebViewPageState extends State<GenericWebViewPage> {
   void initState() {
     super.initState();
 
-    controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setNavigationDelegate(
+    controller = WebViewController();
+    unawaited(controller.setJavaScriptMode(JavaScriptMode.unrestricted));
+    unawaited(
+      controller.setNavigationDelegate(
         NavigationDelegate(
           onNavigationRequest: (request) {
             return NavigationDecision.navigate;
           },
         ),
-      );
+      ),
+    );
 
-    _loadWithCookies();
+    unawaited(_loadWithCookies());
   }
 
   Future<void> _loadWithCookies() async {

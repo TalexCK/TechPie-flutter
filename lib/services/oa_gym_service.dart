@@ -379,9 +379,11 @@ class OaGymService extends ChangeNotifier {
     };
 
     final timeTable = _extractTableString(
-        (await _get(timeUrl, headers: metadataHeaders)).body);
+      (await _get(timeUrl, headers: metadataHeaders)).body,
+    );
     final venueTable = _extractTableString(
-        (await _get(venueUrl, headers: metadataHeaders)).body);
+      (await _get(venueUrl, headers: metadataHeaders)).body,
+    );
     if (timeTable.isEmpty || venueTable.isEmpty) {
       final missing = [
         if (timeTable.isEmpty) '时间段表',
@@ -726,8 +728,11 @@ class OaGymService extends ChangeNotifier {
 
     // The React app sends these as POST body fields. The older Python script
     // uses query params. Try both so TechPie tolerates either OA behavior.
-    return _post(url.replace(queryParameters: body),
-        body: const {}, headers: headers);
+    return _post(
+      url.replace(queryParameters: body),
+      body: const {},
+      headers: headers,
+    );
   }
 
   List<List<String>> _parseXmlRows(String xml) {
@@ -858,8 +863,10 @@ class OaGymService extends ChangeNotifier {
     return response;
   }
 
-  http.Request _cloneRequest(http.Request source,
-      {required bool followRedirects}) {
+  http.Request _cloneRequest(
+    http.Request source, {
+    required bool followRedirects,
+  }) {
     final request = http.Request(source.method, source.url)
       ..followRedirects = followRedirects
       ..headers.addAll(source.headers)
@@ -920,12 +927,18 @@ class OaGymService extends ChangeNotifier {
 
   String _extractTableString(String text) {
     final patterns = [
-      RegExp(r'''var\s+__tableStringKey__\s*=\s*['"]([0-9A-F]+)['"]''',
-          caseSensitive: false),
-      RegExp(r'''name=["']?tableString["']?\s+value=["']?([0-9A-F]+)["']?''',
-          caseSensitive: false),
-      RegExp(r'''tableString\s*=\s*["']?([0-9A-F]+)["']?''',
-          caseSensitive: false),
+      RegExp(
+        r'''var\s+__tableStringKey__\s*=\s*['"]([0-9A-F]+)['"]''',
+        caseSensitive: false,
+      ),
+      RegExp(
+        r'''name=["']?tableString["']?\s+value=["']?([0-9A-F]+)["']?''',
+        caseSensitive: false,
+      ),
+      RegExp(
+        r'''tableString\s*=\s*["']?([0-9A-F]+)["']?''',
+        caseSensitive: false,
+      ),
     ];
     for (final pattern in patterns) {
       final match = pattern.firstMatch(text);

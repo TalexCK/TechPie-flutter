@@ -16,9 +16,9 @@ class CoursePeriod {
   Map<String, dynamic> toJson() => {'index': index, 'timeRange': timeRange};
 
   factory CoursePeriod.fromJson(Map<String, dynamic> json) => CoursePeriod(
-    index: json['index'] as int,
-    timeRange: json['timeRange'] as String,
-  );
+        index: json['index'] as int,
+        timeRange: json['timeRange'] as String,
+      );
 
   Period toPeriod() {
     final parts = timeRange.split('-');
@@ -35,9 +35,9 @@ class EamsCourse {
   final String classroom;
   final String teachers;
   final String
-  weeks; // binary string: "01111111111111111000..." (index 1 = week 1)
+      weeks; // binary string: "01111111111111111000..." (index 1 = week 1)
   final Map<int, List<int>>
-  times; // { weekday(1-7): [period_numbers(1-based)] }
+      times; // { weekday(1-7): [period_numbers(1-based)] }
 
   const EamsCourse({
     required this.name,
@@ -88,12 +88,12 @@ class EamsCourse {
   }
 
   Map<String, dynamic> toJson() => {
-    'name': name,
-    'classroom': classroom,
-    'teachers': teachers,
-    'weeks': weeks,
-    'times': times.map((k, v) => MapEntry(k.toString(), v.join(','))),
-  };
+        'name': name,
+        'classroom': classroom,
+        'teachers': teachers,
+        'weeks': weeks,
+        'times': times.map((k, v) => MapEntry(k.toString(), v.join(','))),
+      };
 
   factory EamsCourse.fromJson(Map<String, dynamic> json) {
     final rawTimes = json['times'] as Map<String, dynamic>? ?? {};
@@ -126,18 +126,18 @@ class CourseTable {
   const CourseTable({required this.periods, required this.courses});
 
   Map<String, dynamic> toJson() => {
-    'periods': periods.map((p) => p.toJson()).toList(),
-    'courses': courses.map((c) => c.toJson()).toList(),
-  };
+        'periods': periods.map((p) => p.toJson()).toList(),
+        'courses': courses.map((c) => c.toJson()).toList(),
+      };
 
   factory CourseTable.fromJson(Map<String, dynamic> json) => CourseTable(
-    periods: (json['periods'] as List<dynamic>? ?? [])
-        .map((p) => CoursePeriod.fromJson(p as Map<String, dynamic>))
-        .toList(),
-    courses: (json['courses'] as List<dynamic>? ?? [])
-        .map((c) => EamsCourse.fromJson(c as Map<String, dynamic>))
-        .toList(),
-  );
+        periods: (json['periods'] as List<dynamic>? ?? [])
+            .map((p) => CoursePeriod.fromJson(p as Map<String, dynamic>))
+            .toList(),
+        courses: (json['courses'] as List<dynamic>? ?? [])
+            .map((c) => EamsCourse.fromJson(c as Map<String, dynamic>))
+            .toList(),
+      );
 
   factory CourseTable.fromApiResponse(Map<String, dynamic> data) {
     final rawPeriods = data['periods'] as List<dynamic>? ?? [];
@@ -171,10 +171,10 @@ class SemesterInfo {
   });
 
   Map<String, dynamic> toJson() => {
-    'semesters': semesters,
-    'defaultSemester': defaultSemester,
-    'tableId': tableId,
-  };
+        'semesters': semesters,
+        'defaultSemester': defaultSemester,
+        'tableId': tableId,
+      };
 
   factory SemesterInfo.fromJson(Map<String, dynamic> json) {
     final raw = json['semesters'] as Map<String, dynamic>? ?? {};

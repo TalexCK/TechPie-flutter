@@ -123,9 +123,11 @@ class _IosNativeTextViewState extends State<IosNativeTextView> {
     if (_updatingFromNative) return;
     final channel = _channel;
     if (channel == null) return;
-    unawaited(channel.invokeMethod<void>('updateText', <String, Object?>{
-      'text': widget.controller.text,
-    }));
+    unawaited(
+      channel.invokeMethod<void>('updateText', <String, Object?>{
+        'text': widget.controller.text,
+      }),
+    );
   }
 
   Future<void> _sendConfigurationUpdate() async {

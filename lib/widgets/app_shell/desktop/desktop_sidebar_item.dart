@@ -27,8 +27,7 @@ class DesktopSidebarItem extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final canShowLabel =
-            !collapsed &&
+        final canShowLabel = !collapsed &&
             constraints.maxWidth >=
                 DesktopSidebarTokens.iconColumnWidth +
                     DesktopSidebarTokens.navItemTextGap +

@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../utils/platform.dart';
-
 import '../services/debug_logger.dart';
 import '../services/service_provider.dart';
+import '../utils/platform.dart';
 import '../widgets/blurred_app_bar.dart';
 import '../widgets/ios_liquid/ios_glass_confirmation_button.dart';
 

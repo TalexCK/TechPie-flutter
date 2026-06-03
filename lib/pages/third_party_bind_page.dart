@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -238,10 +240,10 @@ class _ThirdPartyBindPageState extends State<ThirdPartyBindPage> {
               const SizedBox(height: 12),
               TextFormField(
                 controller: _hydroOriginCtrl,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: 'Hydro 站点 origin',
                   helperText: '默认 https://acm.shanghaitech.edu.cn',
-                  border: const OutlineInputBorder(),
+                  border: OutlineInputBorder(),
                 ),
                 validator: (v) => (v == null || v.trim().isEmpty) ? '必填' : null,
               ),
@@ -250,10 +252,10 @@ class _ThirdPartyBindPageState extends State<ThirdPartyBindPage> {
                 controller: _hydroDomainsCtrl,
                 minLines: 2,
                 maxLines: 6,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: '课程 domain (每行一个,或用逗号分隔)',
                   helperText: '例: SI100B_2025_Autumn',
-                  border: const OutlineInputBorder(),
+                  border: OutlineInputBorder(),
                   alignLabelWithHint: true,
                 ),
                 validator: (v) {
@@ -273,15 +275,15 @@ class _ThirdPartyBindPageState extends State<ThirdPartyBindPage> {
                   subtitle: const Text('过期前 48 小时内自动重登,免去手动重绑'),
                   trailing: IosGlassSwitch(
                     value: _autoRenew,
-                    onChanged: (v) => _onAutoRenewChanged(v),
+                    onChanged: (v) => unawaited(_onAutoRenewChanged(v)),
                   ),
-                  onTap: () => _onAutoRenewChanged(!_autoRenew),
+                  onTap: () => unawaited(_onAutoRenewChanged(!_autoRenew)),
                 ),
               )
             else
               CheckboxListTile(
                 value: _autoRenew,
-                onChanged: (v) => _onAutoRenewChanged(v ?? false),
+                onChanged: (v) => unawaited(_onAutoRenewChanged(v ?? false)),
                 title: const Text('自动更新 Token'),
                 subtitle: const Text('过期前 48 小时内自动重登,免去手动重绑'),
                 controlAffinity: ListTileControlAffinity.leading,
@@ -289,7 +291,7 @@ class _ThirdPartyBindPageState extends State<ThirdPartyBindPage> {
               ),
             const SizedBox(height: 16),
             FilledButton(
-              onPressed: _busy ? null : _submit,
+              onPressed: _busy ? null : () => unawaited(_submit()),
               child: _busy
                   ? const SizedBox(
                       width: 20,
@@ -329,7 +331,7 @@ class _ThirdPartyBindPageState extends State<ThirdPartyBindPage> {
         ],
         onItemPressed: (id) {
           if (id == 'back') {
-            Navigator.maybePop(context);
+            unawaited(Navigator.maybePop(context));
           }
         },
       ),
@@ -360,7 +362,7 @@ class _ThirdPartyBindPageState extends State<ThirdPartyBindPage> {
                   textInputAction:
                       _isHydro ? TextInputAction.next : TextInputAction.done,
                   onSubmitted: (_) {
-                    if (!_isHydro) _submit();
+                    if (!_isHydro) unawaited(_submit());
                   },
                 ),
               ],
@@ -411,14 +413,14 @@ class _ThirdPartyBindPageState extends State<ThirdPartyBindPage> {
                 ),
                 trailing: IosGlassSwitch(
                   value: _autoRenew,
-                  onChanged: (value) => _onAutoRenewChanged(value),
+                  onChanged: (value) => unawaited(_onAutoRenewChanged(value)),
                 ),
-                onTap: () => _onAutoRenewChanged(!_autoRenew),
+                onTap: () => unawaited(_onAutoRenewChanged(!_autoRenew)),
               ),
             ),
             const SizedBox(height: 18),
             FilledButton(
-              onPressed: _busy ? null : _submit,
+              onPressed: _busy ? null : () => unawaited(_submit()),
               child: _busy
                   ? const SizedBox(
                       width: 20,

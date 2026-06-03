@@ -53,7 +53,7 @@ Future<void> presentLoginPage(BuildContext context) async {
 
   if (context.mounted) {
     await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const LoginPage()),
+      MaterialPageRoute<void>(builder: (_) => const LoginPage()),
     );
   }
 }
@@ -66,7 +66,8 @@ Future<void> _presentNativeLoginSheet({
     final arguments = (call.arguments as Map<Object?, Object?>?) ?? const {};
 
     Future<Map<String, Object?>> runAction(
-        Future<void> Function() action) async {
+      Future<void> Function() action,
+    ) async {
       try {
         await action();
         return const <String, Object?>{'ok': true};
@@ -95,7 +96,8 @@ Future<void> _presentNativeLoginSheet({
         });
       default:
         throw MissingPluginException(
-            'Unknown login sheet action ${call.method}');
+          'Unknown login sheet action ${call.method}',
+        );
     }
   });
 
@@ -271,7 +273,7 @@ class _LoginPageState extends State<LoginPage> with WidgetsBindingObserver {
       await ServiceProvider.of(context).authService.smsLogin(phone, code);
       if (mounted) {
         setState(() => _smsInlineMessage = null);
-        ServiceProvider.of(context).scheduleService.fetchAll();
+        unawaited(ServiceProvider.of(context).scheduleService.fetchAll());
         await _dismissKeyboard();
         if (!mounted) return;
         Navigator.pop(context);
@@ -305,7 +307,7 @@ class _LoginPageState extends State<LoginPage> with WidgetsBindingObserver {
       ).authService.egateLogin(username, password);
       if (mounted) {
         setState(() => _egateInlineMessage = null);
-        ServiceProvider.of(context).scheduleService.fetchAll();
+        unawaited(ServiceProvider.of(context).scheduleService.fetchAll());
         await _dismissKeyboard();
         if (!mounted) return;
         Navigator.pop(context);
@@ -482,7 +484,7 @@ class _LoginPageState extends State<LoginPage> with WidgetsBindingObserver {
         ],
         onItemPressed: (id) {
           if (id == 'back') {
-            Navigator.maybePop(context);
+            unawaited(Navigator.maybePop(context));
           }
         },
       ),

@@ -212,6 +212,6 @@ class AuthService extends ChangeNotifier {
   // -- Private helpers --
 
   Map<String, String> _jsonHeaders() => {
-    'Content-Type': 'application/json; charset=UTF-8',
-  };
+        'Content-Type': 'application/json; charset=UTF-8',
+      };
 }

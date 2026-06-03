@@ -63,7 +63,8 @@ class StorageService {
     if (raw == null) return null;
     try {
       return ThirdPartyAccount.fromJson(
-          jsonDecode(raw) as Map<String, dynamic>);
+        jsonDecode(raw) as Map<String, dynamic>,
+      );
     } catch (_) {
       return null;
     }

@@ -68,8 +68,10 @@ void main() {
       }
       if (request.url.path.endsWith('CustomTreeBrowserAjax.jsp')) {
         final body = await request.finalize().bytesToString();
-        expect(request.headers['Cookie'],
-            contains('shkjdx_session=session-value'));
+        expect(
+          request.headers['Cookie'],
+          contains('shkjdx_session=session-value'),
+        );
         if (body.contains('pid=63_1')) {
           return _utf8Response(
             '[{"name":"室内羽毛球场","id":"63_4","isParent":"true"}]',

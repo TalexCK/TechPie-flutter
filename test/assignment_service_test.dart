@@ -99,10 +99,8 @@ void main() {
     );
     expect(service.platformErrors['gradescope'], 'upstream failed');
 
-    final cachedIds = storage
-        .loadCachedAssignments()
-        .map((a) => a['id'])
-        .toList();
+    final cachedIds =
+        storage.loadCachedAssignments().map((a) => a['id']).toList();
     expect(cachedIds, containsAll(['blackboard-new', 'gradescope-old']));
     expect(cachedIds, isNot(contains('blackboard-old')));
   });
@@ -112,13 +110,14 @@ Map<String, dynamic> _assignmentJson({
   required String id,
   required String platform,
   required DateTime due,
-}) => {
-  'id': id,
-  'platform': platform,
-  'title': id,
-  'course': 'Course',
-  'due': due.millisecondsSinceEpoch ~/ 1000,
-};
+}) =>
+    {
+      'id': id,
+      'platform': platform,
+      'title': id,
+      'course': 'Course',
+      'due': due.millisecondsSinceEpoch ~/ 1000,
+    };
 
 class _AssignmentHttpClient extends LoggingHttpClient {
   _AssignmentHttpClient(this._handler) : super(DebugLogger());
@@ -132,5 +131,6 @@ class _AssignmentHttpClient extends LoggingHttpClient {
     Object? body,
     Encoding? encoding,
     String? tag,
-  }) async => _handler(url);
+  }) async =>
+      _handler(url);
 }

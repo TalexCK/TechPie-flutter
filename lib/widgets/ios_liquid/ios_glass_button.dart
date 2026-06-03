@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:techpie/utils/platform.dart';
@@ -26,7 +28,7 @@ class _IosGlassButtonState extends State<IosGlassButton> {
     super.didUpdateWidget(oldWidget);
 
     if (oldWidget.sfSymbol == widget.sfSymbol) return;
-    _sendSymbolUpdate(widget.sfSymbol);
+    unawaited(_sendSymbolUpdate(widget.sfSymbol));
   }
 
   @override

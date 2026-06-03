@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -64,7 +66,7 @@ class AssignmentService extends ChangeNotifier {
 
   void _onDepsChanged() {
     if (!_autoRefetchEnabled) return;
-    fetchAssignments();
+    unawaited(fetchAssignments());
   }
 
   @override
@@ -156,8 +158,8 @@ class AssignmentService extends ChangeNotifier {
   }
 
   Map<String, String> _jsonHeaders() => {
-    'Content-Type': 'application/json; charset=UTF-8',
-  };
+        'Content-Type': 'application/json; charset=UTF-8',
+      };
 
   Future<void> fetchAssignments() async {
     _loading = true;
@@ -217,9 +219,8 @@ class AssignmentService extends ChangeNotifier {
   List<Assignment> _mergeAssignments({
     required Map<String, List<Assignment>> successfulResults,
   }) {
-    final successfulPlatforms = successfulResults.keys
-        .map((p) => p.toLowerCase())
-        .toSet();
+    final successfulPlatforms =
+        successfulResults.keys.map((p) => p.toLowerCase()).toSet();
 
     final merged = <Assignment>[
       for (final a in _assignments)
@@ -275,7 +276,7 @@ class AssignmentService extends ChangeNotifier {
         _error = e.toString();
       }
     }
-    
+
     _loading = false;
     notifyListeners();
   }
@@ -287,11 +288,11 @@ class AssignmentService extends ChangeNotifier {
     if (session == null || session.tgc.isEmpty) return null;
 
     Future<http.Response> doFetch() => _http.post(
-      Uri.parse('$_baseUrl/deadlines/blackboard'),
-      headers: _jsonHeaders(),
-      body: jsonEncode({'token': session.tgc}),
-      tag: 'deadlines:blackboard',
-    );
+          Uri.parse('$_baseUrl/deadlines/blackboard'),
+          headers: _jsonHeaders(),
+          body: jsonEncode({'token': session.tgc}),
+          tag: 'deadlines:blackboard',
+        );
 
     try {
       var resp = await doFetch();

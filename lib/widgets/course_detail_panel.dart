@@ -20,9 +20,8 @@ class CourseDetailContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final titleStyle = compact
-        ? theme.textTheme.titleLarge
-        : theme.textTheme.headlineSmall;
+    final titleStyle =
+        compact ? theme.textTheme.titleLarge : theme.textTheme.headlineSmall;
     final detailColor = colorScheme.onSurfaceVariant;
 
     return Padding(

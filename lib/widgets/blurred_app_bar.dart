@@ -40,7 +40,8 @@ class BlurredAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Size get preferredSize => Size.fromHeight(
-      adaptiveTopBarHeight() + (bottom?.preferredSize.height ?? 0));
+        adaptiveTopBarHeight() + (bottom?.preferredSize.height ?? 0),
+      );
 
   @override
   Widget build(BuildContext context) {

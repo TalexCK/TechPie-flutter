@@ -10,8 +10,11 @@ class LoggingHttpClient {
 
   LoggingHttpClient(this._logger) : _inner = http.Client();
 
-  Future<http.Response> get(Uri url,
-      {Map<String, String>? headers, String? tag}) async {
+  Future<http.Response> get(
+    Uri url, {
+    Map<String, String>? headers,
+    String? tag,
+  }) async {
     _logger.log(method: 'GET', url: url.toString(), tag: tag);
     try {
       final response = await _inner.get(url, headers: headers);
@@ -25,26 +28,37 @@ class LoggingHttpClient {
       return response;
     } catch (e) {
       _logger.log(
-          method: 'GET', url: url.toString(), error: e.toString(), tag: tag);
+        method: 'GET',
+        url: url.toString(),
+        error: e.toString(),
+        tag: tag,
+      );
       rethrow;
     }
   }
 
-  Future<http.Response> post(Uri url,
-      {Map<String, String>? headers,
-      Object? body,
-      Encoding? encoding,
-      String? tag}) async {
+  Future<http.Response> post(
+    Uri url, {
+    Map<String, String>? headers,
+    Object? body,
+    Encoding? encoding,
+    String? tag,
+  }) async {
     final bodyStr =
         body is String ? body : (body != null ? jsonEncode(body) : null);
     _logger.log(
-        method: 'POST',
-        url: url.toString(),
-        requestBody: bodyStr,
-        tag: tag);
+      method: 'POST',
+      url: url.toString(),
+      requestBody: bodyStr,
+      tag: tag,
+    );
     try {
-      final response = await _inner.post(url,
-          headers: headers, body: bodyStr, encoding: encoding);
+      final response = await _inner.post(
+        url,
+        headers: headers,
+        body: bodyStr,
+        encoding: encoding,
+      );
       _logger.log(
         method: 'POST',
         url: url.toString(),
@@ -55,7 +69,11 @@ class LoggingHttpClient {
       return response;
     } catch (e) {
       _logger.log(
-          method: 'POST', url: url.toString(), error: e.toString(), tag: tag);
+        method: 'POST',
+        url: url.toString(),
+        error: e.toString(),
+        tag: tag,
+      );
       rethrow;
     }
   }

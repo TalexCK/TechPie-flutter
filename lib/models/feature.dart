@@ -40,7 +40,7 @@ final featureEntries = <Feature>[
     mode: FeatureMode.webviewWithCookie,
     url: 'https://ecourse.shanghaitech.edu.cn:8080/',
     cookieType: CookieType.ecourse,
-    icon: Icon(Icons.cast_for_education),
+    icon: const Icon(Icons.cast_for_education),
   ),
   Feature(
     id: 'student_leave',
@@ -48,16 +48,16 @@ final featureEntries = <Feature>[
     mode: FeatureMode.webviewWithCookie,
     url: 'https://egate.shanghaitech.edu.cn/xsfw/sys/xsqjapp/*default/index.do',
     cookieType: CookieType.egate,
-    icon: Icon(Icons.door_front_door),
+    icon: const Icon(Icons.door_front_door),
   ),
   Feature(
     id: 'oa_gym',
     description: '场馆预约',
     mode: FeatureMode.native,
     nativeEntry: (context) => Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const OaGymPage()),
+      MaterialPageRoute<void>(builder: (_) => const OaGymPage()),
     ),
-    icon: Icon(Icons.sports_tennis),
+    icon: const Icon(Icons.sports_tennis),
   ),
 ];
 
@@ -66,5 +66,5 @@ final moreFeature = Feature(
   description: '更多',
   mode: FeatureMode.native,
   nativeEntry: (context) {},
-  icon: Icon(Icons.more_horiz),
+  icon: const Icon(Icons.more_horiz),
 );
