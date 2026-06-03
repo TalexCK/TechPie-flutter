@@ -410,7 +410,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               value: value,
               domain: domain,
               path: '/',
-            ));
+            ),);
           }
         }
       }
@@ -707,7 +707,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               ),
             ],
           ),
-        ));
+        ),);
 
     if (onTap != null) {
       return InkWell(
