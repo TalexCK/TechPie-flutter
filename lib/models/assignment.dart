@@ -42,13 +42,13 @@ class Assignment {
   }
 
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'platform': platform,
-    'title': title,
-    'course': course,
-    'due': due.millisecondsSinceEpoch ~/ 1000,
-    if (lateDue != null) 'lateDue': lateDue!.millisecondsSinceEpoch ~/ 1000,
-    'status': status,
-    'url': url,
-  };
+        'id': id,
+        'platform': platform,
+        'title': title,
+        'course': course,
+        'due': due.millisecondsSinceEpoch ~/ 1000,
+        if (lateDue != null) 'lateDue': lateDue!.millisecondsSinceEpoch ~/ 1000,
+        'status': status,
+        'url': url,
+      };
 }

@@ -317,8 +317,7 @@ class _SwipeReveal extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24),
         child: Align(
-          alignment:
-              alignToEnd ? Alignment.centerRight : Alignment.centerLeft,
+          alignment: alignToEnd ? Alignment.centerRight : Alignment.centerLeft,
           child: Opacity(
             opacity: opacity,
             child: Row(

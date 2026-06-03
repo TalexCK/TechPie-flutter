@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -29,7 +31,7 @@ class _IosNativeSegmentedControlState extends State<IosNativeSegmentedControl> {
     if (oldWidget.value != widget.value ||
         oldWidget.segments.length != widget.segments.length ||
         !_sameSegments(oldWidget.segments, widget.segments)) {
-      _sendConfigurationUpdate();
+      unawaited(_sendConfigurationUpdate());
     }
   }
 

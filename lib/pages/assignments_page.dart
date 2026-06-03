@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -7,8 +9,8 @@ import '../models/assignment_overrides.dart';
 import '../services/assignment_service.dart';
 import '../services/service_provider.dart';
 import '../utils/platform.dart';
-import '../widgets/adaptive_feedback.dart';
 import '../widgets/adaptive_alert_dialog.dart';
+import '../widgets/adaptive_feedback.dart';
 import '../widgets/blurred_app_bar.dart';
 import '../widgets/ios_liquid/ios_native_navigation_bar.dart';
 import '../widgets/swipeable_card.dart';
@@ -133,9 +135,13 @@ class _AssignmentsPageState extends State<AssignmentsPage> {
         ],
         onMenuSelected: (_, value) {
           if (value == 'hidden') {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const HiddenAssignmentsPage()),
+            unawaited(
+              Navigator.push(
+                context,
+                MaterialPageRoute<void>(
+                  builder: (_) => const HiddenAssignmentsPage(),
+                ),
+              ),
             );
           }
         },
@@ -149,9 +155,13 @@ class _AssignmentsPageState extends State<AssignmentsPage> {
           icon: const Icon(Icons.more_vert),
           onSelected: (v) {
             if (v == 'hidden') {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const HiddenAssignmentsPage()),
+              unawaited(
+                Navigator.push(
+                  context,
+                  MaterialPageRoute<void>(
+                    builder: (_) => const HiddenAssignmentsPage(),
+                  ),
+                ),
               );
             }
           },
@@ -200,7 +210,9 @@ class _AssignmentsPageState extends State<AssignmentsPage> {
         IconButton(
           icon: const Icon(Icons.restart_alt),
           tooltip: '重置状态',
-          onPressed: _selected.isEmpty ? null : () => _resetSelected(service),
+          onPressed: _selected.isEmpty
+              ? null
+              : () => unawaited(_resetSelected(service)),
         ),
       ],
     );
@@ -231,7 +243,9 @@ class _AssignmentsPageState extends State<AssignmentsPage> {
           banner,
           Expanded(
             child: RefreshIndicator(
-              onRefresh: () => service.fetchAssignments(),
+              onRefresh: () async {
+                await service.fetchAssignments();
+              },
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 children: [
@@ -299,7 +313,9 @@ class _AssignmentsPageState extends State<AssignmentsPage> {
     final todayLabel = DateFormat('yyyy-MM-dd EEE').format(now);
 
     return RefreshIndicator(
-      onRefresh: () => service.fetchAssignments(),
+      onRefresh: () async {
+        await service.fetchAssignments();
+      },
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
         children: [
@@ -392,7 +408,7 @@ class _AssignmentsPageState extends State<AssignmentsPage> {
       hasOverride: service.hasCompletionOverride(a),
       selected: selected,
       selectionMode: _selectionMode,
-      onTap: () => _onTapItem(context, service, a, key),
+      onTap: () => unawaited(_onTapItem(context, service, a, key)),
       onLongPress: _selectionMode ? null : () => _enterSelectionWith(key),
     );
 
@@ -413,7 +429,7 @@ class _AssignmentsPageState extends State<AssignmentsPage> {
               background: scheme.errorContainer,
               foreground: scheme.onErrorContainer,
             ),
-            onStartSwipe: () => service.toggleCompleted(a),
+            onStartSwipe: () => unawaited(service.toggleCompleted(a)),
             onDismissed: () => _onDismiss(context, service, a, key),
             child: card,
           );
@@ -431,7 +447,7 @@ class _AssignmentsPageState extends State<AssignmentsPage> {
     Assignment a,
     String key,
   ) {
-    service.hide(a);
+    unawaited(service.hide(a));
 
     showAdaptiveFeedback(
       context: context,
@@ -439,7 +455,7 @@ class _AssignmentsPageState extends State<AssignmentsPage> {
       style: AdaptiveFeedbackStyle.info,
       duration: const Duration(seconds: 4),
       actionLabel: '撤销',
-      onAction: () => service.unhide(key),
+      onAction: () => unawaited(service.unhide(key)),
     );
   }
 
@@ -552,7 +568,7 @@ class _PlatformErrorsBanner extends StatelessWidget {
                 ),
                 IconButton(
                   icon: const Icon(Icons.refresh, size: 20),
-                  onPressed: () => service.fetchPlatform(entry.key),
+                  onPressed: () => unawaited(service.fetchPlatform(entry.key)),
                   color: theme.colorScheme.onErrorContainer,
                   tooltip: '重试 ${entry.key}',
                 ),

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -29,11 +31,11 @@ class _IosGlassSwitchState extends State<IosGlassSwitch> {
     super.didUpdateWidget(oldWidget);
 
     if (oldWidget.value != widget.value) {
-      _sendValueUpdate(widget.value);
+      unawaited(_sendValueUpdate(widget.value));
     }
 
     if (oldWidget.enabled != widget.enabled) {
-      _sendEnabledUpdate(widget.enabled);
+      unawaited(_sendEnabledUpdate(widget.enabled));
     }
   }
 

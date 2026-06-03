@@ -257,14 +257,14 @@ class IcsExportService {
 
   String _escapeText(String value) {
     return value
-        .replaceAll(r'\', r'\\')
+        .replaceAll(r'', r'')
         .replaceAll(';', r'\;')
         .replaceAll(',', r'\,')
         .replaceAll('\n', r'\n');
   }
 
   String _escapeAppleText(String value) {
-    return value.replaceAll(r'\', r'\\').replaceAll('"', r'\"');
+    return value.replaceAll(r'', r'').replaceAll('"', r'\"');
   }
 }
 

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../models/oa_gym.dart';
@@ -51,19 +53,19 @@ class _OaGymPageState extends State<OaGymPage>
       appBar: useIosChrome
           ? IosNativeNavigationBar(
               title: '场馆预约',
-              leadingItems: [
+              leadingItems: const [
                 IosNativeNavigationBarItem(
                   id: 'back',
                   title: 'Home',
                   sfSymbol: 'chevron.left',
                   accessibilityLabel: '返回 Home',
                   placementGroup: 'leading-main',
-                )
+                ),
               ],
               onItemPressed: (id) {
                 switch (id) {
                   case 'back':
-                    Navigator.maybePop(context);
+                    unawaited(Navigator.maybePop(context));
                 }
               },
             )
@@ -174,7 +176,7 @@ class _BookingTabState extends State<_BookingTab> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_availability.isEmpty && !_checking) {
-      _refreshAvailability();
+      unawaited(_refreshAvailability());
     }
   }
 
@@ -290,7 +292,7 @@ class _BookingTabState extends State<_BookingTab> {
       _selectedCourts.clear();
       _result = null;
     });
-    _refreshAvailability();
+    unawaited(_refreshAvailability());
   }
 
   void _toggleCourt(String key, int court) {
@@ -370,8 +372,8 @@ class _BookingTabState extends State<_BookingTab> {
                   max: oaTimeEndpointEnd.toDouble(),
                   divisions: oaTimeEndpointEnd - oaTimeEndpointStart,
                   labels: RangeLabels(
-                    '${_startHour.toString().padLeft(2, '0')}:00',
-                    '${_endHour.toString().padLeft(2, '0')}:00',
+                    "${_startHour.toString().padLeft(2, "0")}:00",
+                    "${_endHour.toString().padLeft(2, "0")}:00",
                   ),
                   onChanged: (value) {
                     setState(() {
@@ -379,7 +381,7 @@ class _BookingTabState extends State<_BookingTab> {
                       _selectedCourts.clear();
                     });
                   },
-                  onChangeEnd: (_) => _refreshAvailability(),
+                  onChangeEnd: (_) => unawaited(_refreshAvailability()),
                 ),
                 Align(
                   alignment: Alignment.centerRight,
@@ -553,7 +555,7 @@ class _SearchTabState extends State<_SearchTab> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (ServiceProvider.of(context).oaGymService.venues.isEmpty) {
-      _ensureMetadata();
+      unawaited(_ensureMetadata());
     }
   }
 
@@ -1141,7 +1143,9 @@ List<_SearchDateGroup> _groupSearchResults(List<OaCourtSearchResult> results) {
       if (useDate.isEmpty) continue;
       final timeRange = result.timeRange.isEmpty ? '全部时间' : result.timeRange;
       final itemsByTime = dateMap.putIfAbsent(
-          useDate, () => <String, List<_SearchResultItem>>{});
+        useDate,
+        () => <String, List<_SearchResultItem>>{},
+      );
       final items =
           itemsByTime.putIfAbsent(timeRange, () => <_SearchResultItem>[]);
       items.add(

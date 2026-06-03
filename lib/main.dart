@@ -16,8 +16,8 @@ import 'services/service_provider.dart';
 import 'services/storage_service.dart';
 import 'services/theme_service.dart';
 import 'services/third_party_auth_service.dart';
-import 'widgets/app_shell/app_shell.dart';
 import 'widgets/adaptive_feedback.dart';
+import 'widgets/app_shell/app_shell.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

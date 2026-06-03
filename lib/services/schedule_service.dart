@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 
 import '../models/course_table.dart';
 import 'auth_service.dart';
@@ -41,8 +42,8 @@ class ScheduleService extends ChangeNotifier {
   }
 
   Map<String, String> _jsonHeaders() => {
-    'Content-Type': 'application/json; charset=UTF-8',
-  };
+        'Content-Type': 'application/json; charset=UTF-8',
+      };
 
   Map<String, dynamic> _authBody() {
     final session = _auth.session!;
@@ -95,15 +96,13 @@ class ScheduleService extends ChangeNotifier {
       _authBody(),
       'fetchSemesters',
     );
-    if (resp == null) return;
-
     final data = jsonDecode(resp.body) as Map<String, dynamic>;
     if (data['success'] != true) {
       throw Exception(data['error'] as String? ?? 'Failed to fetch semesters');
     }
 
     _semesterInfo = SemesterInfo.fromJson(data['data'] as Map<String, dynamic>);
-    _storage.saveSemesters(_semesterInfo!);
+    await _storage.saveSemesters(_semesterInfo!);
     notifyListeners();
   }
 
@@ -120,8 +119,6 @@ class ScheduleService extends ChangeNotifier {
       body,
       'fetchCourseTable',
     );
-    if (resp == null) return;
-
     final data = jsonDecode(resp.body) as Map<String, dynamic>;
     if (data['success'] != true) {
       throw Exception(
@@ -132,7 +129,7 @@ class ScheduleService extends ChangeNotifier {
     _courseTable = CourseTable.fromApiResponse(
       data['data'] as Map<String, dynamic>,
     );
-    _storage.saveCourseTable(semesterId, _courseTable!);
+    await _storage.saveCourseTable(semesterId, _courseTable!);
     notifyListeners();
   }
 
@@ -171,8 +168,6 @@ class ScheduleService extends ChangeNotifier {
       body,
       'fetchTermBegin',
     );
-    if (resp == null) return;
-
     final data = jsonDecode(resp.body) as Map<String, dynamic>;
     if (data['success'] != true) {
       throw Exception(data['error'] as String? ?? 'Failed to fetch term begin');
@@ -181,14 +176,14 @@ class ScheduleService extends ChangeNotifier {
     final dateStr = data['data'] as String;
     _termBegin = DateTime.tryParse(dateStr);
     if (_termBegin != null) {
-      _storage.saveTermBegin(cacheKey, _termBegin!);
+      await _storage.saveTermBegin(cacheKey, _termBegin!);
     }
     notifyListeners();
   }
 
   Future<void> selectSemester(String semesterId) async {
     _selectedSemesterId = semesterId;
-    _storage.setSelectedSemester(semesterId);
+    await _storage.setSelectedSemester(semesterId);
     notifyListeners();
 
     // Load cached data for new semester first
@@ -215,7 +210,7 @@ class ScheduleService extends ChangeNotifier {
     }
   }
 
-  Future<dynamic> _postWithRetry(
+  Future<http.Response> _postWithRetry(
     String url,
     Map<String, dynamic> body,
     String tag,

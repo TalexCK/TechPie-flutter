@@ -12,12 +12,12 @@ import '../models/feature.dart';
 import '../services/assignment_service.dart';
 import '../services/schedule_service.dart';
 import '../services/service_provider.dart';
+import '../utils/platform.dart';
 import '../widgets/adaptive_alert_dialog.dart';
 import '../widgets/adaptive_feedback.dart';
-import '../widgets/blurred_app_bar.dart';
 import '../widgets/app_card.dart';
+import '../widgets/blurred_app_bar.dart';
 import '../widgets/ios_liquid/ios_native_navigation_bar.dart';
-import '../utils/platform.dart';
 import 'generic_webview_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -382,12 +382,15 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             break;
         }
         if (feature.url != null) {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => GenericWebViewPage(
-                title: feature.description,
-                url: feature.url!,
-                cookies: cookies),
+          unawaited(
+            Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => GenericWebViewPage(
+                  title: feature.description,
+                  url: feature.url!,
+                  cookies: cookies,
+                ),
+              ),
             ),
           );
         }
@@ -545,7 +548,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     final dueLabel = _dueLabel(a.due, now);
 
     return InkWell(
-      onTap: () => _openAssignmentUrl(a),
+      onTap: () => unawaited(_openAssignmentUrl(a)),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
         child: Row(

@@ -51,16 +51,18 @@ class DebugLogger extends ChangeNotifier {
     if (_entries.length >= _maxEntries) {
       _entries.removeAt(0);
     }
-    _entries.add(LogEntry(
-      timestamp: DateTime.now(),
-      method: method,
-      url: url,
-      statusCode: statusCode,
-      requestBody: redactSensitive(requestBody),
-      responseBody: redactSensitive(responseBody),
-      error: error,
-      tag: tag,
-    ));
+    _entries.add(
+      LogEntry(
+        timestamp: DateTime.now(),
+        method: method,
+        url: url,
+        statusCode: statusCode,
+        requestBody: redactSensitive(requestBody),
+        responseBody: redactSensitive(responseBody),
+        error: error,
+        tag: tag,
+      ),
+    );
     notifyListeners();
   }
 

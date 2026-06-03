@@ -168,9 +168,11 @@ class _IosNativeTextFieldGroupState extends State<IosNativeTextFieldGroup> {
     if (_updatingFromNative) return;
     final channel = _channel;
     if (channel == null) return;
-    unawaited(channel.invokeMethod<void>('updateTexts', <String, Object?>{
-      'texts': [for (final item in widget.items) item.controller.text],
-    }));
+    unawaited(
+      channel.invokeMethod<void>('updateTexts', <String, Object?>{
+        'texts': [for (final item in widget.items) item.controller.text],
+      }),
+    );
   }
 
   Future<void> _sendConfigurationUpdate() async {

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../models/assignment.dart';
@@ -54,7 +56,7 @@ class _HiddenAssignmentsPageState extends State<HiddenAssignmentsPage> {
   void _restoreSelected() {
     final service = ServiceProvider.of(context).assignmentService;
     for (final key in _selected.toList()) {
-      service.unhide(key);
+      unawaited(service.unhide(key));
     }
     _exitSelectionMode();
   }
@@ -123,7 +125,7 @@ class _HiddenAssignmentsPageState extends State<HiddenAssignmentsPage> {
                   onItemPressed: (id) {
                     switch (id) {
                       case 'back':
-                        Navigator.maybePop(context);
+                        unawaited(Navigator.maybePop(context));
                       case 'toggleSelectAll':
                         if (hiddenKeys.isNotEmpty) {
                           _toggleSelectAll(hiddenKeys);

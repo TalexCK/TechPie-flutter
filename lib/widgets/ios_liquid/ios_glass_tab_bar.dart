@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -46,7 +48,7 @@ class _IosGlassTabBarState extends State<IosGlassTabBar> {
     super.didUpdateWidget(oldWidget);
 
     if (oldWidget.selectedIndex == widget.selectedIndex) return;
-    _sendSelectionUpdate(_safeSelectedIndex);
+    unawaited(_sendSelectionUpdate(_safeSelectedIndex));
   }
 
   @override
@@ -64,9 +66,8 @@ class _IosGlassTabBarState extends State<IosGlassTabBar> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final mediaWidth = MediaQuery.sizeOf(context).width;
-        final constrainedWidth = constraints.hasBoundedWidth
-            ? constraints.maxWidth
-            : mediaWidth;
+        final constrainedWidth =
+            constraints.hasBoundedWidth ? constraints.maxWidth : mediaWidth;
         final width = constrainedWidth.isFinite ? constrainedWidth : mediaWidth;
 
         if (width <= 40 || tabBarHeight <= 20) {
