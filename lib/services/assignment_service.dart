@@ -340,7 +340,6 @@ class AssignmentService extends ChangeNotifier {
     Map<String, dynamic> buildBody() => {
           'semester_id': semesterId,
           'cookies': _eamsCookies(),
-          'exam_batch_id': '1222',
         };
 
     try {
