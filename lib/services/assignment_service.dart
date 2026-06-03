@@ -340,6 +340,7 @@ class AssignmentService extends ChangeNotifier {
     Map<String, dynamic> buildBody() => {
           'semester_id': semesterId,
           'cookies': _eamsCookies(),
+          'exam_batch_id': '1222',
         };
 
     try {
@@ -497,186 +498,61 @@ class AssignmentService extends ChangeNotifier {
     required String batchName,
     required String semesterId,
   }) {
-    final due = _examDateTime(exam);
+    final courseCode = _stringField(exam, 'courseCode');
+    final courseName = _stringField(exam, 'courseName');
+    final examType = _stringField(exam, 'examType');
+    final examDate = _stringField(exam, 'examDate');
+    final examTimeRange = _stringField(exam, 'examTimeRange');
+    final examPlace = _stringField(exam, 'examPlace');
+    final examStatus = _stringField(exam, 'examStatus');
+    final seatUrl = _stringField(exam, 'seatUrl');
+    final examRoomId = _stringField(exam, 'examRoomId');
+
+    final due = _examDateTime(examDate, examTimeRange, pickEnd: false);
     if (due == null) return null;
-
-    final course = _firstString(exam, const [
-          'course',
-          'courseName',
-          'course_name',
-          'courseTitle',
-          'course_title',
-          'name',
-        ]) ??
-        '未命名课程';
-    final examType = _firstString(exam, const [
-      'examType',
-      'exam_type',
-      'type',
-      'category',
-    ]);
-    final title = _firstString(exam, const [
-          'title',
-          'examName',
-          'exam_name',
-        ]) ??
-        (examType == null || examType.isEmpty
-            ? '$course 考试'
-            : '$course $examType');
-
-    final location = _firstString(exam, const [
-      'location',
-      'classroom',
-      'room',
-      'examRoom',
-      'exam_room',
-      'place',
-    ]);
-    final seat = _firstString(exam, const [
-      'seat',
-      'seatNo',
-      'seat_no',
-      'seatNumber',
-      'seat_number',
-    ]);
+    final end = _examDateTime(examDate, examTimeRange, pickEnd: true);
 
     final detailParts = [
-      if (location != null && location.isNotEmpty) location,
-      if (seat != null && seat.isNotEmpty) '座位 $seat',
+      if (examPlace.isNotEmpty) examPlace,
       if (batchName.isNotEmpty) batchName,
     ];
 
     return Assignment(
-      id: _examId(
-        exam,
-        batchId: batchId,
-        semesterId: semesterId,
-        course: course,
-        due: due,
-      ),
+      id: '$semesterId:$batchId:$courseCode:$examRoomId',
       platform: 'exam',
       kind: DeadlineKind.exam,
-      title: title,
-      course:
-          detailParts.isEmpty ? course : '$course · ${detailParts.join(' · ')}',
+      title: '$courseName $examType'.trim(),
+      course: detailParts.isEmpty
+          ? courseName
+          : '$courseName · ${detailParts.join(' · ')}',
       due: due,
-      status: 'Exam',
+      lateDue: end,
+      status: examStatus.isEmpty ? null : examStatus,
+      url: seatUrl.isEmpty ? null : seatUrl,
     );
   }
 
-  String _examId(
-    Map<String, dynamic> exam, {
-    required String batchId,
-    required String semesterId,
-    required String course,
-    required DateTime due,
+  String _stringField(Map<String, dynamic> data, String key) =>
+      data[key]?.toString().trim() ?? '';
+
+  DateTime? _examDateTime(
+    String examDate,
+    String examTimeRange, {
+    required bool pickEnd,
   }) {
-    final explicit = _firstString(exam, const [
-      'id',
-      'examId',
-      'exam_id',
-      'scheduleId',
-      'schedule_id',
-    ]);
-    if (explicit != null && explicit.isNotEmpty) {
-      return '$semesterId:$batchId:$explicit';
-    }
-    final courseCode = _firstString(exam, const [
-          'courseCode',
-          'course_code',
-          'code',
-        ]) ??
-        course;
-    return '$semesterId:$batchId:$courseCode:${due.toIso8601String()}';
-  }
+    final dateMatch = RegExp(r'^(\d{4})-(\d{2})-(\d{2})$').firstMatch(examDate);
+    final timeMatches =
+        RegExp(r'(\d{1,2}):(\d{2})').allMatches(examTimeRange).toList();
+    if (dateMatch == null || timeMatches.length < 2) return null;
 
-  DateTime? _examDateTime(Map<String, dynamic> exam) {
-    for (final key in const [
-      'due',
-      'startAt',
-      'start_at',
-      'beginAt',
-      'begin_at',
-      'dateTime',
-      'datetime',
-      'examDateTime',
-      'exam_datetime',
-      'examTime',
-      'exam_time',
-      'time',
-    ]) {
-      final parsed = _parseDateTimeValue(exam[key]);
-      if (parsed != null) return parsed;
-    }
-
-    final date = _firstString(exam, const [
-      'date',
-      'examDate',
-      'exam_date',
-      'day',
-    ]);
-    if (date == null) return null;
-
-    final time = _firstString(exam, const [
-      'startTime',
-      'start_time',
-      'beginTime',
-      'begin_time',
-      'time',
-      'examTime',
-      'exam_time',
-    ]);
-    return _parseDateTimeValue(
-      time == null || time.isEmpty ? date : '$date ${_firstTime(time)}',
+    final timeMatch = pickEnd ? timeMatches.last : timeMatches.first;
+    return DateTime(
+      int.parse(dateMatch.group(1)!),
+      int.parse(dateMatch.group(2)!),
+      int.parse(dateMatch.group(3)!),
+      int.parse(timeMatch.group(1)!),
+      int.parse(timeMatch.group(2)!),
     );
-  }
-
-  DateTime? _parseDateTimeValue(dynamic value) {
-    if (value == null) return null;
-    if (value is num) {
-      final raw = value.toInt();
-      final millis = raw > 100000000000 ? raw : raw * 1000;
-      return DateTime.fromMillisecondsSinceEpoch(millis);
-    }
-
-    final text = value.toString().trim();
-    if (text.isEmpty) return null;
-    final numeric = num.tryParse(text);
-    if (numeric != null) return _parseDateTimeValue(numeric);
-
-    final normalized = text
-        .replaceAll('年', '-')
-        .replaceAll('月', '-')
-        .replaceAll('日', ' ')
-        .replaceFirst(' ', 'T');
-    final parsed = DateTime.tryParse(normalized);
-    if (parsed != null) return parsed;
-
-    final match = RegExp(
-      r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})(?:\D+(\d{1,2}):(\d{2}))?',
-    ).firstMatch(text);
-    if (match == null) return null;
-    final year = int.parse(match.group(1)!);
-    final month = int.parse(match.group(2)!);
-    final day = int.parse(match.group(3)!);
-    final hour = int.tryParse(match.group(4) ?? '') ?? 0;
-    final minute = int.tryParse(match.group(5) ?? '') ?? 0;
-    return DateTime(year, month, day, hour, minute);
-  }
-
-  String? _firstString(Map<String, dynamic> data, List<String> keys) {
-    for (final key in keys) {
-      final value = data[key];
-      if (value == null) continue;
-      final text = value.toString().trim();
-      if (text.isNotEmpty) return text;
-    }
-    return null;
-  }
-
-  String _firstTime(String text) {
-    final match = RegExp(r'(\d{1,2}:\d{2})').firstMatch(text);
-    return match?.group(1) ?? text;
   }
 
   String? _selectedSemesterId() =>

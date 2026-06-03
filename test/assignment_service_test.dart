@@ -151,13 +151,15 @@ void main() {
                 'studentId': '26192',
                 'exams': [
                   {
-                    'examId': 'exam-1',
-                    'courseName': 'Algorithms',
-                    'examType': '期中',
-                    'examDate': '2026-04-10',
-                    'examTime': '09:00-11:00',
-                    'classroom': 'Room 101',
-                    'seatNo': '12',
+                    'courseCode': 'CS130.01',
+                    'courseName': '操作系统I',
+                    'examType': '期中考试',
+                    'examDate': '2026-04-23',
+                    'examTimeRange': '15:00~16:40',
+                    'examPlace': '教学中心204',
+                    'examStatus': '正常',
+                    'seatUrl': 'https://eams.example/seat',
+                    'examRoomId': '7987',
                   },
                 ],
               },
@@ -188,9 +190,12 @@ void main() {
     final exam = service.assignments.single;
     expect(exam.platform, 'exam');
     expect(exam.kind, DeadlineKind.exam);
-    expect(exam.title, 'Algorithms 期中');
-    expect(exam.course, contains('Room 101'));
-    expect(exam.due, DateTime(2026, 4, 10, 9));
+    expect(exam.title, '操作系统I 期中考试');
+    expect(exam.course, contains('教学中心204'));
+    expect(exam.due, DateTime(2026, 4, 23, 15));
+    expect(exam.lateDue, DateTime(2026, 4, 23, 16, 40));
+    expect(exam.status, '正常');
+    expect(exam.url, 'https://eams.example/seat');
     expect(
       seenBodies,
       contains(
